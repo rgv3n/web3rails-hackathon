@@ -14,11 +14,17 @@ financial operations. First product: reconciliation. Tone: institutional, precis
 | `--fg` | #0F1418 graphite | text |
 | `--fg-muted` | #4B555E | secondary text (AA on bg) |
 | `--line` | #E2E3DE | hairlines |
-| `--accent` | #0E7C8C "rail teal" | the one accent, used sparingly |
+| `--accent` | #88C103 lime (from the logo) | marks, rails, tags. Never body text |
+| `--accent-strong` | #4F7A00 | the same green darkened for text on light backgrounds (AA) |
 | `--ink` | #0B0F13 | dark data panels (raw tx, code, architecture) |
 | `--ok` / `--warn` | #1E8E5A / #B7791F | reconciliation status only |
 
 Never: purple gradients, neon, floating coins, 3D chain logos.
+
+## Logo
+Official assets in `public/brand/`: `logo-full.png` (mark + wordmark + domain line), `logo-lockup.png`
+(mark + wordmark), `logo-mark.png` (the W). Ask for the vector original (SVG/AI) before print or large sizes.
+The favicon is `src/app/icon.png`, built from the mark.
 
 ## Typography
 Geist (UI, headlines with tight tracking) + Geist Mono (hashes, amounts, API, metadata).

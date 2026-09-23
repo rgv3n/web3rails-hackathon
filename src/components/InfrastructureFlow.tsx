@@ -55,7 +55,7 @@ function VerticalRail() {
 
 function StageLabel({ n, children, accent }: { n: string; children: string; accent?: boolean }) {
   return (
-    <p className={cn("mb-3 flex items-baseline gap-2 font-mono text-[11px] uppercase tracking-[0.18em]", accent ? "text-accent" : "text-fg-subtle")}>
+    <p className={cn("mb-3 flex items-baseline gap-2 font-mono text-[11px] uppercase tracking-[0.18em]", accent ? "text-accent-strong" : "text-fg-subtle")}>
       <span className="tabular">{n}</span>
       <span>{children}</span>
     </p>
