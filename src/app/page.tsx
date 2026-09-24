@@ -1,5 +1,6 @@
 import { Navigation } from "@/components/Navigation";
 import { Hero } from "@/components/Hero";
+import { VideoOverview } from "@/components/VideoOverview";
 import { Thesis } from "@/components/Thesis";
 import { ProblemComparison } from "@/components/ProblemComparison";
 import { Pipeline } from "@/components/Pipeline";
@@ -21,6 +22,7 @@ export default function HomePage() {
       <Navigation />
       <main id="main" className="flex-1">
         <Hero />
+        <VideoOverview />
         <Thesis />
         <ProblemComparison />
         <Pipeline />

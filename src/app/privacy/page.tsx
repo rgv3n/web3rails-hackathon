@@ -9,11 +9,13 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <PageShell eyebrow="Legal" title="Privacy notice." lede="This notice covers the web3rails.io website. Last updated 23 September 2026.">
+    <PageShell eyebrow="Legal" title="Privacy notice." lede="This notice covers the web3rails.io website. Last updated 24 September 2026.">
       <h2>What this website collects</h2>
       <p>
         The website is a static informational site. It does not set advertising or analytics cookies
-        and does not run third-party trackers. Standard server logs (IP address, user agent,
+        and does not run third-party trackers. The homepage embeds a video hosted by Vimeo with
+        Vimeo&apos;s &ldquo;do not track&rdquo; setting enabled, which stops the player from setting cookies or
+        collecting session analytics; Vimeo still receives the technical data needed to stream the video. Standard server logs (IP address, user agent,
         requested URL, timestamp) may be kept by our hosting provider for security and operational
         purposes for a limited period.
       </p>

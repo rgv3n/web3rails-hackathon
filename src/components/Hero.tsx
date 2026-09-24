@@ -18,7 +18,7 @@ export function Hero() {
             <Button href="/#platform" size="lg" arrow>
               Explore the platform
             </Button>
-            <Button href="/#problem" size="lg" variant="secondary">
+            <Button href="/#overview" size="lg" variant="secondary">
               See how it works
             </Button>
           </div>

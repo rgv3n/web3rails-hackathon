@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { ArrowDownLeft, ArrowRightLeft, ArrowUpRight, Check, CircleDashed, Loader2, Minus, X } from "lucide-react";
 import {
   auditExamples,
@@ -513,26 +513,24 @@ const views: { id: View; label: string; count?: string }[] = [
 
 export function ProductDemo() {
   const [rows, setRows] = useState(seed);
-  const [view, setView] = useState<View>("queue");
+  // Deep link: /?view=exceptions#reconciliation opens a specific view. Read from the URL without
+  // setting state inside an effect; the user's own choice (chosen) always wins once they click.
+  const urlView = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(window.location.search).get("view"),
+    () => null,
+  );
+  const [chosen, setView] = useState<View | null>(null);
+  const view: View = chosen ?? (urlView === "exceptions" || urlView === "audit" ? urlView : "queue");
   const [selectedId, setSelectedId] = useState(seed[0].id);
   const [exceptionId, setExceptionId] = useState(exceptions[0].id);
   const tabsId = useId();
-
-  // Deep link: /?view=exceptions#reconciliation opens a specific view.
-  useEffect(() => {
-    const v = new URLSearchParams(window.location.search).get("view");
-    if (v === "queue" || v === "exceptions" || v === "audit") setView(v);
-  }, []);
 
   // One-shot demo motion: the "matching" row settles into "reconciled" shortly after mount.
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const settle = () => setRows((r) => r.map((x) => (x.status === "processing" ? { ...x, status: "reconciled" } : x)));
-    if (reduce) {
-      settle();
-      return;
-    }
-    const t = window.setTimeout(settle, 2200);
+    const t = window.setTimeout(settle, reduce ? 0 : 2200);
     return () => window.clearTimeout(t);
   }, []);
 
