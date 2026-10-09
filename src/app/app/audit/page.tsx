@@ -9,7 +9,7 @@ export default async function AuditPage() {
   const supabase = await createClient();
   const { data: events } = await supabase
     .from("audit_events")
-    .select("id, entity, action, after, before, at, actor:actor_id(full_name)")
+    .select("id, entity, action, after, before, at, actor:profiles!audit_events_actor_profile_fkey(full_name)")
     .eq("org_id", ctx.org.id)
     .order("at", { ascending: false })
     .limit(100);

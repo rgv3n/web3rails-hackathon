@@ -15,7 +15,7 @@ export default async function TeamPage() {
   const supabase = await createClient();
   const { data: members } = await supabase
     .from("memberships")
-    .select("user_id, role, created_at, profiles:user_id(full_name, job_title)")
+    .select("user_id, role, created_at, profiles:profiles!memberships_user_profile_fkey(full_name, job_title)")
     .eq("org_id", ctx.org.id)
     .order("created_at", { ascending: true });
 
