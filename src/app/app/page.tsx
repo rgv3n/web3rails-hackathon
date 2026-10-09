@@ -29,8 +29,8 @@ export default async function OverviewPage() {
     { label: "Declare your first wallet", href: "/app/organization", done: (wallets.count ?? 0) > 0 },
     { label: "Import movements (CSV)", href: can(ctx, "import") ? "/app/movements/import" : null, done: (movements.count ?? 0) > 0 },
     { label: "Add financial context to unidentified movements", href: "/app/movements?filter=needs_review", done: (movements.count ?? 0) > 0 && (unidentified.count ?? 0) === 0 },
-    { label: "Import invoices and review matches", href: null, done: false },
-    { label: "Approve and export with evidence", href: null, done: false },
+    { label: "Import invoices and review matches", href: "/app/reconciliation", done: (movements.count ?? 0) > 0 && (unidentified.count ?? 0) === 0 && (openExceptions.count ?? 0) === 0 },
+    { label: "Approve and export with evidence", href: "/app/exports", done: false },
   ];
 
   return (

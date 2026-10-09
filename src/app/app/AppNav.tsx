@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AlertTriangle, ArrowLeftRight, Building2, Cable, ClipboardList, FileText, GitMerge, LayoutDashboard, UserRound, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Building2, Cable, ClipboardList, Download, FileText, GitMerge, LayoutDashboard, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const items = [
@@ -11,6 +11,7 @@ const items = [
   { href: "/app/reconciliation", label: "Reconciliation", icon: GitMerge },
   { href: "/app/exceptions", label: "Exceptions", icon: AlertTriangle },
   { href: "/app/invoices", label: "Invoices", icon: FileText },
+  { href: "/app/exports", label: "Evidence & exports", icon: Download },
   { href: "/app/organization", label: "Organization", icon: Building2 },
   { href: "/app/integrations", label: "Integrations & API", icon: Cable },
   { href: "/app/account", label: "Account", icon: UserRound },

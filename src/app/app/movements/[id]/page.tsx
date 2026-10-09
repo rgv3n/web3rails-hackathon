@@ -9,6 +9,7 @@ import { Badge, Card, CardHeader, Notice, PageTitle } from "@/components/ui";
 import { categoryLabel, getMovement, reconLabel, reviewLabel } from "../queries";
 import { ContextForm } from "./ContextForm";
 import { ReconciliationBlock } from "../../reconciliation/ReconciliationBlock";
+import { ReviewBlock } from "./review/ReviewBlock";
 
 export const metadata = { title: "Movement" };
 
@@ -160,6 +161,14 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
           <CardHeader title="Reconciliation" text="Invoice candidates with named signals, and the recorded decision." />
           <div className="p-5">
             <ReconciliationBlock supabase={supabase} orgId={ctx.org.id} m={m} canDecide={can(ctx, "edit_context")} tolerance={tolerance} />
+          </div>
+        </Card>
+
+        {/* 3b · Review */}
+        <Card className="lg:col-span-2">
+          <CardHeader title="Review" text="Approval is a separate decision from matching. The server decides eligibility; blockers are listed here." />
+          <div className="p-5">
+            <ReviewBlock supabase={supabase} m={m} canApprove={can(ctx, "approve")} tz={tz} />
           </div>
         </Card>
 
