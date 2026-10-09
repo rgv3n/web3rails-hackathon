@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Web3Rails — front office (app.web3rails.io)
 
-## Getting Started
-
-First, run the development server:
+Next.js 16 (App Router) · TypeScript · Tailwind 4 · Supabase (Auth + Postgres + RLS) · lucide-react.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npx supabase start        # local stack on ports 573xx (API 57321, DB 57322, Studio 57323, mail 57324)
+npm run dev               # http://localhost:3000
+npm run build && npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` points at the local stack (public demo keys, not secrets). For a hosted project, replace the two variables.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Where things live
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| What | Where |
+|---|---|
+| Schema and RLS | `supabase/migrations/*.sql` |
+| Supabase clients (server, browser) and session refresh | `src/lib/supabase/*`, `src/proxy.ts` |
+| Current org + role for the signed-in user | `src/lib/org.ts` (`requireOrg`) |
+| Integration catalogue (maturity labels are product truth) | `src/lib/integrations.ts` |
+| API key generation (prefix + sha256 stored, secret shown once) | `src/lib/api-keys.ts` |
+| Auth pages and actions | `src/app/(auth)/*` |
+| Organization onboarding | `src/app/onboarding/*` |
+| App shell and pages | `src/app/app/*` |
+| Brand tokens (copied from the site) | `src/app/globals.css`, `public/brand/` |
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Plan and status: `../docs/2026-10-09-front-office-plan.md`.
