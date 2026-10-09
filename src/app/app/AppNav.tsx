@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Cable, ClipboardList, LayoutDashboard, UserRound, Users } from "lucide-react";
+import { ArrowLeftRight, Building2, Cable, ClipboardList, LayoutDashboard, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const items = [
   { href: "/app", label: "Overview", icon: LayoutDashboard, exact: true },
+  { href: "/app/movements", label: "Movements", icon: ArrowLeftRight },
+  { href: "/app/organization", label: "Organization", icon: Building2 },
   { href: "/app/integrations", label: "Integrations & API", icon: Cable },
   { href: "/app/account", label: "Account", icon: UserRound },
   { href: "/app/team", label: "Team", icon: Users },
@@ -37,11 +39,6 @@ export function AppNav({ horizontal = false }: { horizontal?: boolean }) {
           </Link>
         );
       })}
-      {!horizontal ? (
-        <p className="mt-3 flex items-center gap-2 px-2.5 text-[11px] uppercase tracking-wide text-fg-subtle">
-          <Activity className="h-3.5 w-3.5" /> Wallets, invoices, review: next
-        </p>
-      ) : null}
     </nav>
   );
 }

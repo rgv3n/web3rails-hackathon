@@ -33,7 +33,7 @@ export default async function TeamPage() {
                   <p className="font-medium">{p?.full_name ?? "—"}{m.user_id === ctx.userId ? <span className="text-fg-subtle"> (you)</span> : null}</p>
                   <p className="text-fg-muted">{p?.job_title ?? ""}</p>
                 </div>
-                <Badge tone={m.role === "owner" ? "accent" : "neutral"}>
+                <Badge tone={m.role === "admin" ? "accent" : "neutral"}>
                   <span className="capitalize">{m.role}</span>
                 </Badge>
               </li>

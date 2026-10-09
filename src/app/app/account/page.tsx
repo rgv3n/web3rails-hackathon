@@ -1,4 +1,4 @@
-import { requireOrg } from "@/lib/org";
+import { can, requireOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader, PageTitle } from "@/components/ui";
 import { OrganizationForm, ProfileForm } from "./forms";
@@ -21,13 +21,13 @@ export default async function AccountPage() {
           </div>
         </Card>
         <Card>
-          <CardHeader title="Organization" text={ctx.role === "owner" ? "Owners can edit these settings." : "Read-only for your role."} />
+          <CardHeader title="Organization" text={can(ctx, "manage_org") ? "Admins can edit these settings." : "Read-only for your role."} />
           <div className="p-5">
             <OrganizationForm
               name={ctx.org.name}
               baseCurrency={ctx.org.base_currency}
               timezone={ctx.org.timezone}
-              readOnly={ctx.role !== "owner"}
+              readOnly={!can(ctx, "manage_org")}
             />
             <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line pt-4 text-sm">
               <dt className="text-fg-muted">Organization ID</dt>

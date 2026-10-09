@@ -1,4 +1,4 @@
-import { requireOrg } from "@/lib/org";
+import { can, requireOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { integrationGroups, maturityLabel, type Maturity } from "@/lib/integrations";
 import { Badge, Card, CardHeader, Notice, PageTitle } from "@/components/ui";
@@ -34,8 +34,8 @@ export default async function IntegrationsPage() {
     supabase.from("integration_requests").select("integration_slug, status").eq("org_id", ctx.org.id),
   ]);
   const requested = new Map((requests ?? []).map((r) => [r.integration_slug, r.status]));
-  const canManage = ctx.role === "owner";
-  const canRequest = ctx.role !== "auditor";
+  const canManage = can(ctx, "manage_org");
+  const canRequest = can(ctx, "import");
 
   return (
     <>
@@ -61,7 +61,7 @@ export default async function IntegrationsPage() {
                 <CreateKeyForm />
               </div>
             ) : (
-              <p className="mt-4 text-sm text-fg-muted">Only owners can create or revoke keys.</p>
+              <p className="mt-4 text-sm text-fg-muted">Only admins can create or revoke keys.</p>
             )}
           </div>
           <div className="border-t border-line">

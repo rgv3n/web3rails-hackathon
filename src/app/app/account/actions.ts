@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireOrg } from "@/lib/org";
+import { can, requireOrg } from "@/lib/org";
 
 export interface AccountState {
   error?: string;
@@ -23,7 +23,7 @@ export async function updateProfile(_prev: AccountState, formData: FormData): Pr
 
 export async function updateOrganization(_prev: AccountState, formData: FormData): Promise<AccountState> {
   const ctx = await requireOrg();
-  if (ctx.role !== "owner") return { error: "Only owners can change organization settings." };
+  if (!can(ctx, "manage_org")) return { error: "Only admins can change organization settings." };
   const supabase = await createClient();
   const name = String(formData.get("name") ?? "").trim();
   const base_currency = String(formData.get("base_currency") ?? "EUR");

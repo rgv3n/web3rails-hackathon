@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireOrg } from "@/lib/org";
+import { can, requireOrg } from "@/lib/org";
 import { generateApiKey } from "@/lib/api-keys";
 import { findIntegration } from "@/lib/integrations";
 
@@ -15,7 +15,7 @@ export interface KeyState {
 
 export async function createApiKey(_prev: KeyState, formData: FormData): Promise<KeyState> {
   const ctx = await requireOrg();
-  if (ctx.role !== "owner") return { error: "Only owners can create API keys." };
+  if (!can(ctx, "manage_org")) return { error: "Only admins can create API keys." };
   const name = String(formData.get("name") ?? "").trim();
   const env = formData.get("env") === "live" ? "live" : "test";
   const scopes = formData.getAll("scopes").map(String).filter((s) => ["read", "write"].includes(s));
@@ -44,7 +44,7 @@ export async function createApiKey(_prev: KeyState, formData: FormData): Promise
 
 export async function revokeApiKey(formData: FormData) {
   const ctx = await requireOrg();
-  if (ctx.role !== "owner") return;
+  if (!can(ctx, "manage_org")) return;
   const id = String(formData.get("id") ?? "");
   const supabase = await createClient();
   const { data } = await supabase
@@ -70,7 +70,7 @@ export async function revokeApiKey(formData: FormData) {
 
 export async function requestIntegration(formData: FormData) {
   const ctx = await requireOrg();
-  if (ctx.role === "auditor") return;
+  if (!can(ctx, "import")) return;
   const slug = String(formData.get("slug") ?? "");
   const integration = findIntegration(slug);
   if (!integration) return;
