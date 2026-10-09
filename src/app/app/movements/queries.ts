@@ -63,23 +63,47 @@ function shape(r: Raw): MovementRow {
 export async function listMovements(
   supabase: SupabaseClient,
   orgId: string,
-  params: { filter?: MovementFilter; entity?: string; wallet?: string; from?: string; to?: string; q?: string; limit?: number },
-): Promise<MovementRow[]> {
-  let q = supabase.from("movements").select(SELECT).eq("org_id", orgId).order("block_time", { ascending: false }).limit(params.limit ?? 200);
+  params: { filter?: MovementFilter; entity?: string; wallet?: string; from?: string; to?: string; q?: string; sort?: MovementSort; page?: number; pageSize?: number },
+): Promise<{ rows: MovementRow[]; total: number; page: number; pageSize: number }> {
+  const pageSize = params.pageSize ?? PAGE_SIZE;
+  const page = Math.max(1, params.page ?? 1);
+  const [col, dir] = sortSpec[params.sort ?? "date_desc"];
+  let q = supabase
+    .from("movements")
+    .select(SELECT, { count: "exact" })
+    .eq("org_id", orgId)
+    .order(col, { ascending: dir === "asc" })
+    .order("id", { ascending: true })
+    .range((page - 1) * pageSize, page * pageSize - 1);
   if (params.entity) q = q.eq("entity_id", params.entity);
   if (params.wallet) q = q.eq("wallet_id", params.wallet);
   if (params.from) q = q.gte("block_time", params.from);
   if (params.to) q = q.lte("block_time", params.to + "T23:59:59Z");
   if (params.q) q = q.or(`tx_signature.ilike.%${params.q}%,from_address.ilike.%${params.q}%,to_address.ilike.%${params.q}%`);
-  if (params.filter === "needs_review") q = q.neq("review_status", "approved");
+  // Filters are applied in the database so pagination counts are exact.
+  if (params.filter === "needs_review") q = q.or("identification_status.eq.unidentified,review_status.neq.approved");
   if (params.filter === "no_invoice") q = q.eq("reconciliation_status", "unmatched");
-  const { data, error } = await q;
+  if (params.filter === "discrepancy") q = q.not("id", "is", null).in("id", await idsWithOpenException(supabase, orgId, "import_discrepancy"));
+  const { data, error, count } = await q;
   if (error) throw error;
-  let rows = (data as unknown as Raw[]).map(shape);
-  if (params.filter === "discrepancy") rows = rows.filter((r) => r.open_exceptions.some((e) => e.kind === "import_discrepancy"));
-  if (params.filter === "needs_review") rows = rows.filter((r) => r.identification_status === "unidentified" || r.open_exceptions.length > 0 || r.review_status !== "approved");
-  return rows;
+  return { rows: (data as unknown as Raw[]).map(shape), total: count ?? 0, page, pageSize };
 }
+
+async function idsWithOpenException(supabase: SupabaseClient, orgId: string, kind: string): Promise<string[]> {
+  const { data } = await supabase.from("exceptions").select("movement_id").eq("org_id", orgId).eq("kind", kind).neq("status", "resolved");
+  const ids = (data ?? []).map((e) => e.movement_id as string).filter(Boolean);
+  return ids.length ? ids : ["00000000-0000-0000-0000-000000000000"];
+}
+
+export const PAGE_SIZE = 50;
+export type MovementSort = "date_desc" | "date_asc" | "amount_desc" | "amount_asc";
+export const sortLabel: Record<MovementSort, string> = { date_desc: "Newest first", date_asc: "Oldest first", amount_desc: "Largest amount", amount_asc: "Smallest amount" };
+const sortSpec: Record<MovementSort, [string, "asc" | "desc"]> = {
+  date_desc: ["block_time", "desc"],
+  date_asc: ["block_time", "asc"],
+  amount_desc: ["amount_raw", "desc"],
+  amount_asc: ["amount_raw", "asc"],
+};
 
 export async function getMovement(supabase: SupabaseClient, orgId: string, id: string): Promise<MovementRow | null> {
   const { data, error } = await supabase.from("movements").select(SELECT).eq("org_id", orgId).eq("id", id).maybeSingle();

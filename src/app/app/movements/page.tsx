@@ -4,7 +4,7 @@ import { can, requireOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { formatTokenAmount, formatFiat } from "@/lib/money";
 import { Badge, Button, Card, Input, Notice, PageTitle, Select } from "@/components/ui";
-import { attentionReason, categoryLabel, filterLabel, listMovements, reviewLabel, type MovementFilter } from "./queries";
+import { attentionReason, categoryLabel, filterLabel, listMovements, reviewLabel, sortLabel, type MovementFilter, type MovementSort } from "./queries";
 import { cn } from "@/lib/cn";
 
 export const metadata = { title: "Movements" };
@@ -17,22 +17,34 @@ export default async function MovementsPage(props: { searchParams: Promise<SP> }
   const ctx = await requireOrg();
   const supabase = await createClient();
   const filter = (["all", "needs_review", "no_invoice", "discrepancy"].includes(s(sp.filter)) ? s(sp.filter) : "all") as MovementFilter;
-  const params = { filter, entity: s(sp.entity), wallet: s(sp.wallet), from: s(sp.from), to: s(sp.to), q: s(sp.q) };
+  const sort = (Object.keys(sortLabel).includes(s(sp.sort)) ? s(sp.sort) : "date_desc") as MovementSort;
+  const page = Math.max(1, Number(s(sp.page)) || 1);
+  const params = { filter, entity: s(sp.entity), wallet: s(sp.wallet), from: s(sp.from), to: s(sp.to), q: s(sp.q), sort, page };
 
   const [{ data: entities }, { data: wallets }] = await Promise.all([
     supabase.from("legal_entities").select("id, name").eq("org_id", ctx.org.id).order("name"),
     supabase.from("wallets").select("id, label").eq("org_id", ctx.org.id).order("label"),
   ]);
 
-  let rows: Awaited<ReturnType<typeof listMovements>> = [];
+  let rows: Awaited<ReturnType<typeof listMovements>>["rows"] = [];
+  let total = 0;
   let loadError: string | null = null;
   try {
-    rows = await listMovements(supabase, ctx.org.id, params);
+    ({ rows, total } = await listMovements(supabase, ctx.org.id, params));
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Could not load movements.";
   }
+  const { data: lastBatch } = await supabase.from("import_batches").select("created_at").eq("org_id", ctx.org.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
 
-  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString();
+  const qs = new URLSearchParams(
+    Object.entries({ ...params, page: page > 1 ? String(page) : "", sort: sort !== "date_desc" ? sort : "" }).filter(([, v]) => v) as [string, string][],
+  ).toString();
+  const pageCount = Math.max(1, Math.ceil(total / 50));
+  const pageHref = (n: number) => {
+    const p = new URLSearchParams(qs);
+    if (n > 1) p.set("page", String(n)); else p.delete("page");
+    return `/app/movements?${p}`;
+  };
   const backParam = qs ? `?back=${encodeURIComponent(qs)}` : "";
 
   return (
@@ -88,6 +100,21 @@ export default async function MovementsPage(props: { searchParams: Promise<SP> }
         <Input name="to" type="date" defaultValue={params.to} aria-label="To date" />
         <Input name="q" defaultValue={params.q} placeholder="Signature or address" aria-label="Search" />
         <Button type="submit" variant="secondary">Apply</Button>
+        <div className="flex items-center justify-between gap-3 text-xs text-fg-muted sm:col-span-6">
+          <label className="flex items-center gap-2">
+            Sort
+            <Select name="sort" defaultValue={sort} className="h-8 w-auto text-xs">
+              {Object.entries(sortLabel).map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </Select>
+          </label>
+          <span>
+            {total} movement{total === 1 ? "" : "s"}
+            {lastBatch ? ` · data as of last import ${new Date(lastBatch.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: ctx.org.timezone })}` : ""}
+            {" · chain sync not configured"}
+          </span>
+        </div>
       </form>
 
       {loadError ? <Notice tone="warn">{loadError}</Notice> : null}
@@ -159,7 +186,15 @@ export default async function MovementsPage(props: { searchParams: Promise<SP> }
           </div>
         )}
       </Card>
-      {rows.length >= 200 ? <p className="mt-2 text-xs text-fg-subtle">Showing the first 200. Narrow the filters to see the rest.</p> : null}
+      {pageCount > 1 ? (
+        <nav className="mt-3 flex items-center justify-between text-sm" aria-label="Pagination">
+          <span className="text-fg-muted">Page {page} of {pageCount}</span>
+          <div className="flex gap-2">
+            {page > 1 ? <Link href={pageHref(page - 1)} className="rounded-md border border-line px-3 py-1.5 hover:bg-surface-2">Previous</Link> : null}
+            {page < pageCount ? <Link href={pageHref(page + 1)} className="rounded-md border border-line px-3 py-1.5 hover:bg-surface-2">Next</Link> : null}
+          </div>
+        </nav>
+      ) : null}
     </>
   );
 }
