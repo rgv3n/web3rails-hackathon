@@ -38,10 +38,18 @@ async function decide(kind: "accept" | "manual_link" | "reject" | "unlink", form
   return { ok: { accept: "Match accepted.", manual_link: "Invoice linked.", reject: "Candidate rejected.", unlink: "Invoice unlinked; matching re-ran." }[kind] };
 }
 
-export const acceptMatch = (_p: DecisionState, f: FormData) => decide("accept", f);
-export const manualLink = (_p: DecisionState, f: FormData) => decide("manual_link", f);
-export const rejectMatch = (_p: DecisionState, f: FormData) => decide("reject", f);
-export const unlinkMatch = (_p: DecisionState, f: FormData) => decide("unlink", f);
+export async function acceptMatch(_p: DecisionState, f: FormData) {
+  return decide("accept", f);
+}
+export async function manualLink(_p: DecisionState, f: FormData) {
+  return decide("manual_link", f);
+}
+export async function rejectMatch(_p: DecisionState, f: FormData) {
+  return decide("reject", f);
+}
+export async function unlinkMatch(_p: DecisionState, f: FormData) {
+  return decide("unlink", f);
+}
 
 export async function rerunMatching() {
   const ctx = await requireOrg();
