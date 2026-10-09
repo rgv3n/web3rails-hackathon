@@ -39,3 +39,14 @@ export function formatFiat(value: string, currency: string): string {
   const cents = (frac + "00").slice(0, 2);
   return `${sign}${groupThousands(whole)}.${cents} ${currency}`;
 }
+
+/** Exact decimal string from Postgres numeric → display without float: trims trailing zeros, keeps at least `minFraction` places. */
+export function trimDecimal(value: string | null | undefined, minFraction = 2): string {
+  if (value == null) return "—";
+  const m = /^(-?\d+)(?:\.(\d+))?$/.exec(String(value));
+  if (!m) return String(value);
+  const [, whole, frac = ""] = m;
+  let f = frac.replace(/0+$/, "");
+  if (f.length < minFraction) f = f.padEnd(minFraction, "0");
+  return f ? `${whole}.${f}` : whole;
+}

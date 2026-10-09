@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { can, requireOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
-import { formatTokenAmount } from "@/lib/money";
+import { formatTokenAmount, trimDecimal } from "@/lib/money";
 import { Badge, Card, CardHeader, PageTitle } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
 import { listMovements } from "../movements/queries";
@@ -25,7 +25,7 @@ export default async function ReconciliationPage() {
     <>
       <PageTitle
         title="Reconciliation"
-        text={`Deterministic 1:1 matching. Tolerance ±${tolerance} token units, date window ${org?.matching_date_window_days ?? 30} days after due date. Signals are named, never scored. Nothing is accepted without a person.`}
+        text={`Deterministic 1:1 matching. Tolerance ±${trimDecimal(tolerance)} token units, date window ${org?.matching_date_window_days ?? 30} days after due date. Signals are named, never scored. Nothing is accepted without a person.`}
         action={
           canDecide ? (
             <form action={rerunMatching}>

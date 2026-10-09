@@ -2,6 +2,7 @@ import { can, requireOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader, PageTitle } from "@/components/ui";
 import { MatchingSettingsForm, OrganizationForm, ProfileForm } from "./forms";
+import { trimDecimal } from "@/lib/money";
 
 export const metadata = { title: "Account" };
 
@@ -45,7 +46,7 @@ export default async function AccountPage() {
         <CardHeader title="Reconciliation policy" text="Deterministic rules. No default is invented: these values are visible on every proposal." />
         <div className="p-5">
           <MatchingSettingsForm
-            tolerance={String(settings?.matching_tolerance ?? "0.01")}
+            tolerance={trimDecimal(String(settings?.matching_tolerance ?? "0.01"))}
             windowDays={settings?.matching_date_window_days ?? 30}
             allowSelfApproval={settings?.allow_self_approval ?? false}
             readOnly={!can(ctx, "manage_org")}

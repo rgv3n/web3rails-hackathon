@@ -3,6 +3,7 @@ import { Upload } from "lucide-react";
 import { can, requireOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Button, Card, PageTitle } from "@/components/ui";
+import { trimDecimal } from "@/lib/money";
 
 export const metadata = { title: "Invoices" };
 
@@ -51,7 +52,7 @@ export default async function InvoicesPage(props: { searchParams: Promise<Record
                       <td className="px-4 py-2.5">{i.counterparty_name}</td>
                       <td className="px-4 py-2.5 text-fg-muted">{ent?.name ?? "—"}</td>
                       <td className="px-4 py-2.5 capitalize text-fg-muted">{i.kind}</td>
-                      <td className="tabular px-4 py-2.5 text-right font-mono text-xs">{i.amount} {i.currency}{!i.token_mint ? <span className="ml-1 text-fg-subtle" title="Not a known stablecoin: cannot be matched without a valuation">·fiat</span> : null}</td>
+                      <td className="tabular px-4 py-2.5 text-right font-mono text-xs">{trimDecimal(i.amount)} {i.currency}{!i.token_mint ? <span className="ml-1 text-fg-subtle" title="Not a known stablecoin: cannot be matched without a valuation">·fiat</span> : null}</td>
                       <td className="px-4 py-2.5 font-mono text-xs text-fg-muted">{i.issued_at}</td>
                       <td className="px-4 py-2.5 font-mono text-xs text-fg-muted">{i.due_at ?? "—"}</td>
                       <td className="px-4 py-2.5">

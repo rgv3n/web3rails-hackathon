@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { Badge } from "@/components/ui";
-import { formatFiat } from "@/lib/money";
+import { formatFiat, trimDecimal } from "@/lib/money";
 import type { MovementRow } from "../movements/queries";
 import { openInvoicesFor, proposalsFor, signalLabel } from "./queries";
 import { AcceptRejectForm, ManualLinkForm, UnlinkForm } from "./DecisionForms";
@@ -27,7 +27,7 @@ export async function ReconciliationBlock({ supabase, orgId, m, canDecide, toler
     return (
       <div className="space-y-3 text-sm">
         <p>
-          Matched to <span className="font-mono text-xs">{inv?.external_ref}</span> · {inv?.counterparty_name} · <span className="font-mono text-xs">{inv?.amount} {inv?.currency}</span>
+          Matched to <span className="font-mono text-xs">{inv?.external_ref}</span> · {inv?.counterparty_name} · <span className="font-mono text-xs">{trimDecimal(inv?.amount)} {inv?.currency}</span>
         </p>
         <p className="text-xs text-fg-muted">
           {dec?.kind === "manual_link" ? "Linked manually" : "Proposal accepted"} by {actor?.full_name ?? "—"} on {dec ? new Date(dec.decided_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : "—"}
@@ -47,7 +47,7 @@ export async function ReconciliationBlock({ supabase, orgId, m, canDecide, toler
     <div className="space-y-4 text-sm">
       {proposals.length === 0 ? (
         <p className="text-fg-muted">
-          No candidate. Candidates need the same entity, token and direction and either an exact reference or an amount within the tolerance ({tolerance} token units).
+          No candidate. Candidates need the same entity, token and direction and either an exact reference or an amount within the tolerance ({trimDecimal(tolerance)} token units).
           {m.identification_status === "unidentified" ? " Add financial context (counterparty, reference) to improve matching." : ""}
         </p>
       ) : (
@@ -62,7 +62,7 @@ export async function ReconciliationBlock({ supabase, orgId, m, canDecide, toler
                   <span>
                     <span className="font-mono text-xs">{p.invoice?.external_ref}</span> · {p.invoice?.counterparty_name}
                   </span>
-                  <span className="tabular font-mono text-xs">{p.invoice?.amount} {p.invoice?.currency} · issued {p.invoice?.issued_at}{p.invoice?.due_at ? ` · due ${p.invoice.due_at}` : ""}</span>
+                  <span className="tabular font-mono text-xs">{trimDecimal(p.invoice?.amount)} {p.invoice?.currency} · issued {p.invoice?.issued_at}{p.invoice?.due_at ? ` · due ${p.invoice.due_at}` : ""}</span>
                 </div>
                 <ul className="flex flex-wrap gap-1">
                   {Object.keys(signalLabel).map((s) => (
@@ -70,7 +70,7 @@ export async function ReconciliationBlock({ supabase, orgId, m, canDecide, toler
                   ))}
                 </ul>
                 <p className="text-xs text-fg-muted">
-                  Difference {p.differences.amount_diff} (tolerance {p.differences.tolerance}) · {typeof p.differences.days_from_due === "number" ? `${p.differences.days_from_due} days from due date` : ""}
+                  Difference {trimDecimal(p.differences.amount_diff)} (tolerance {trimDecimal(p.differences.tolerance)}) · {typeof p.differences.days_from_due === "number" ? `${p.differences.days_from_due} days from due date` : ""}
                 </p>
                 {canDecide ? <AcceptRejectForm movementId={m.id} invoiceId={p.invoice_id} version={m.context_version} /> : null}
               </li>

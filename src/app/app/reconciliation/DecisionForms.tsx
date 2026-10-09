@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { acceptMatch, manualLink, rejectMatch, unlinkMatch, type DecisionState } from "./actions";
 import { Button, Input, Notice, Select } from "@/components/ui";
+import { trimDecimal } from "@/lib/money";
 import { SubmitButton } from "@/components/SubmitButton";
 
 function Status({ state }: { state: DecisionState }) {
@@ -58,7 +59,7 @@ export function ManualLinkForm({ movementId, version, invoices }: { movementId: 
         <Select name="invoice_id" className="h-8 w-auto max-w-xs text-xs" required>
           <option value="">Link to an open invoice…</option>
           {invoices.map((i) => (
-            <option key={i.id} value={i.id}>{i.external_ref} · {i.counterparty_name} · {i.amount} {i.currency}</option>
+            <option key={i.id} value={i.id}>{i.external_ref} · {i.counterparty_name} · {trimDecimal(i.amount)} {i.currency}</option>
           ))}
         </Select>
         <Input name="reason" placeholder="Reason (required for a manual link)" className="h-8 w-64 text-xs" required />
