@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { can, requireOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
-import { formatTokenAmount, formatFiat } from "@/lib/money";
+import { formatTokenAmount } from "@/lib/money";
 import { explorerAddressUrl, explorerTxUrl, shortId } from "@/lib/solana";
 import { Badge, Card, CardHeader, Notice, PageTitle } from "@/components/ui";
 import { categoryLabel, getMovement, reconLabel, reviewLabel } from "../queries";
 import { ContextForm } from "./ContextForm";
+import { ReconciliationBlock } from "../../reconciliation/ReconciliationBlock";
 
 export const metadata = { title: "Movement" };
 
@@ -29,7 +30,7 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
   const m = await getMovement(supabase, ctx.org.id, id);
   if (!m) notFound();
 
-  const [{ data: revisions }, { data: events }, { data: discrepancies }] = await Promise.all([
+  const [{ data: revisions }, { data: events }, { data: discrepancies }, { data: decisions }] = await Promise.all([
     supabase
       .from("movement_context_revisions")
       .select("version, counterparty_name, purpose, category, reference, note, created_at, author:profiles!movement_context_revisions_created_by_fkey(full_name)")
@@ -42,8 +43,11 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
       .eq("entity_id", id)
       .order("at", { ascending: false }),
     supabase.from("import_discrepancies").select("field, stored_value, incoming_value, created_at").eq("movement_id", id).order("created_at", { ascending: false }),
+    supabase.from("match_decisions").select("id, kind, reason, decided_at, invoice:invoices(external_ref), actor:profiles!match_decisions_actor_id_fkey(full_name)").eq("movement_id", id).order("decided_at", { ascending: false }),
   ]);
 
+  const { data: orgRow } = await supabase.from("organizations").select("matching_tolerance").eq("id", ctx.org.id).single();
+  const tolerance = String(orgRow?.matching_tolerance ?? "0.01");
   const current = (revisions ?? []).find((r) => r.version === m.context_version) ?? null;
   const txUrl = explorerTxUrl("solana", m.tx_signature);
   const tz = ctx.org.timezone;
@@ -153,11 +157,9 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
 
         {/* 3 · Reconciliation */}
         <Card>
-          <CardHeader title="Reconciliation" text="Invoice candidates and the recorded decision." action={<Badge>In development</Badge>} />
-          <div className="p-5 text-sm text-fg-muted">
-            <p>Status: <span className="text-fg">{reconLabel[m.reconciliation_status]}</span>.</p>
-            <p className="mt-1">Invoice import and 1:1 matching with explained signals arrive in the next phase. Nothing is matched automatically.</p>
-            <p className="mt-3">Valuation: {m.valuation ? <span className="text-fg">{formatFiat(m.valuation.fiat_amount, m.valuation.currency)} · {m.valuation.source}</span> : <span className="text-fg">No valuation</span>} <span className="text-fg-subtle">(no rate source configured)</span></p>
+          <CardHeader title="Reconciliation" text="Invoice candidates with named signals, and the recorded decision." />
+          <div className="p-5">
+            <ReconciliationBlock supabase={supabase} orgId={ctx.org.id} m={m} canDecide={can(ctx, "edit_context")} tolerance={tolerance} />
           </div>
         </Card>
 
@@ -179,6 +181,20 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
                     {fmt(r.created_at)} · {author?.full_name ?? "—"}
                     {r.reference ? ` · ref ${r.reference}` : ""}
                   </p>
+                </div>
+              );
+            })}
+            {(decisions ?? []).map((d) => {
+              const actor = d.actor as unknown as { full_name: string | null } | null;
+              const inv = d.invoice as unknown as { external_ref: string } | null;
+              return (
+                <div key={d.id} className="px-5 py-3 text-sm">
+                  <p>
+                    <span className="font-medium">match</span> <span className="text-fg-muted">{d.kind.replace("_", " ")}</span>
+                    {inv ? <span className="font-mono text-xs"> {inv.external_ref}</span> : null}
+                    {d.reason ? <span className="text-fg-muted"> · “{d.reason}”</span> : null}
+                  </p>
+                  <p className="text-xs text-fg-subtle">{fmt(d.decided_at)} · {actor?.full_name ?? "—"}</p>
                 </div>
               );
             })}
