@@ -5,6 +5,8 @@ import { Badge, Card, CardHeader, Notice, PageTitle } from "@/components/ui";
 import { SubmitButton } from "@/components/SubmitButton";
 import { EntityForm, WalletForm } from "./forms";
 import { archiveWallet } from "./actions";
+import { SyncButton } from "./SyncButton";
+import { heliusConfigured } from "@/lib/helius";
 import Link from "next/link";
 
 export const metadata = { title: "Organization" };
@@ -14,9 +16,11 @@ export default async function OrganizationPage() {
   const supabase = await createClient();
   const [{ data: entities }, { data: wallets }] = await Promise.all([
     supabase.from("legal_entities").select("id, name, reporting_currency").eq("org_id", ctx.org.id).order("name"),
-    supabase.from("wallets").select("id, label, address, ownership, status, entity:legal_entities(name)").eq("org_id", ctx.org.id).order("created_at"),
+    supabase.from("wallets").select("id, label, address, ownership, status, last_synced_at, last_sync_error, sync_cursor, entity:legal_entities(name)").eq("org_id", ctx.org.id).order("created_at"),
   ]);
   const admin = can(ctx, "manage_org");
+  const configured = heliusConfigured();
+  const fmt = (d: string | null) => (d ? new Date(d).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: ctx.org.timezone }) : "never");
 
   return (
     <>
@@ -43,7 +47,7 @@ export default async function OrganizationPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Declared wallets" text="Public addresses only. Web3Rails never asks for private keys." />
+          <CardHeader title="Declared wallets" text="Public addresses only. Web3Rails never asks for private keys." action={<Badge tone={configured ? "ok" : "neutral"}>{configured ? "Chain sync: Helius" : "Chain sync: not configured"}</Badge>} />
           <ul className="divide-y divide-line">
             {(wallets ?? []).map((w) => {
               const ent = w.entity as unknown as { name: string } | null;
@@ -59,13 +63,21 @@ export default async function OrganizationPage() {
                     <p className="truncate font-mono text-xs text-fg-muted">
                       {url ? <a href={url} target="_blank" rel="noreferrer" className="hover:underline">{w.address}</a> : w.address}
                     </p>
-                    <p className="text-xs text-fg-subtle">{ent?.name ?? "—"} · solana</p>
+                    <p className="text-xs text-fg-subtle">
+                      {ent?.name ?? "—"} · solana · last sync {fmt(w.last_synced_at)}
+                      {w.last_sync_error ? <span className="text-warn"> · {w.last_sync_error}</span> : null}
+                    </p>
                   </div>
-                  {admin && w.status === "active" ? (
-                    <form action={archiveWallet}>
-                      <input type="hidden" name="id" value={w.id} />
-                      <SubmitButton variant="ghost" className="h-7 px-2 text-xs" pendingText="…">Archive</SubmitButton>
-                    </form>
+                  {w.status === "active" ? (
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {can(ctx, "import") ? <SyncButton walletId={w.id} configured={configured} /> : null}
+                      {admin ? (
+                        <form action={archiveWallet}>
+                          <input type="hidden" name="id" value={w.id} />
+                          <SubmitButton variant="ghost" className="h-7 px-2 text-xs" pendingText="…">Archive</SubmitButton>
+                        </form>
+                      ) : null}
+                    </div>
                   ) : null}
                 </li>
               );

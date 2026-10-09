@@ -204,7 +204,7 @@ declare
   v_m record; v_inv record;
   v_amount numeric(28,8); v_ref text; v_cp text; v_other text;
   v_signals text[]; v_diff numeric(28,8); v_candidates int; v_days int;
-  v_partial boolean;
+  v_partial boolean; v_nearest_diff numeric(28,8); v_nearest_ref text; v_nearest_greater boolean; v_larger_ref text; v_larger_amount numeric(28,8);
 begin
   select * into v_org from public.organizations where id = p_org;
   for v_m in
@@ -228,7 +228,7 @@ begin
     v_ref := nullif(trim(v_m.ctx_reference), '');
     v_cp := nullif(trim(v_m.ctx_counterparty), '');
     v_other := case when v_m.direction = 'in' then v_m.from_address else v_m.to_address end;
-    v_candidates := 0; v_partial := false;
+    v_candidates := 0; v_partial := false; v_nearest_diff := null; v_nearest_ref := null; v_nearest_greater := null; v_larger_ref := null; v_larger_amount := null;
 
     for v_inv in
       select i.* from public.invoices i
@@ -255,8 +255,14 @@ begin
         on conflict (movement_id, invoice_id, rule_version) do update set signals = excluded.signals, differences = excluded.differences, status = 'proposed', created_at = now();
         insert into public.audit_events (org_id, actor_id, actor_kind, entity, entity_id, action, after)
         values (p_org, null, 'system', 'match', v_m.id, 'proposed', jsonb_build_object('invoice_id', v_inv.id, 'invoice', v_inv.external_ref, 'signals', v_signals, 'rule_version', 'v1', 'amount_diff', v_diff::text));
-      elsif ('counterparty_known' = any(v_signals)) and v_amount < v_inv.amount then
-        v_partial := true;   -- same counterparty, movement smaller than invoice, outside tolerance: partial payment, unsupported in v1
+      elsif 'counterparty_known' = any(v_signals) then
+        -- Same counterparty, amount outside tolerance: remember the closest invoice to explain the exception.
+        if v_nearest_diff is null or v_diff < v_nearest_diff then
+          v_nearest_diff := v_diff; v_nearest_ref := v_inv.external_ref; v_nearest_greater := v_inv.amount > v_amount;
+        end if;
+        if v_inv.amount > v_amount and (v_larger_amount is null or v_inv.amount < v_larger_amount) then
+          v_larger_ref := v_inv.external_ref; v_larger_amount := v_inv.amount;   -- smallest invoice that is still larger than the movement
+        end if;
       end if;
     end loop;
 
@@ -273,8 +279,15 @@ begin
       update public.movements set reconciliation_status = 'unmatched' where id = v_m.id;
       update public.exceptions set status = 'resolved', resolution = 'Superseded by re-run', resolved_at = now()
         where movement_id = v_m.id and kind = 'ambiguous_match' and status <> 'resolved';
+      -- Closest same-counterparty invoice: larger and far → partial payment (unsupported); otherwise → amount mismatch to review.
+      -- Small difference to the closest invoice → mismatch to review. Otherwise, if a larger invoice of the same counterparty exists → partial payment.
+      v_partial := v_nearest_ref is not null and v_nearest_diff > greatest(v_org.matching_tolerance * 100, v_amount * 0.05) and v_larger_ref is not null;
       if v_partial then
-        perform public.open_exception(p_org, v_m.id, 'unsupported_partial', 'Looks like a partial payment of a larger invoice from the same counterparty. Partial and grouped payments are not supported in this version.');
+        update public.exceptions set status = 'resolved', resolution = 'Superseded by re-run', resolved_at = now() where movement_id = v_m.id and kind = 'amount_mismatch' and status <> 'resolved';
+        perform public.open_exception(p_org, v_m.id, 'unsupported_partial', 'Looks like a partial payment of invoice ' || v_larger_ref || ' (' || (v_larger_amount - v_amount)::text || ' short). Partial and grouped payments are not supported in this version.');
+      elsif v_nearest_ref is not null then
+        update public.exceptions set status = 'resolved', resolution = 'Superseded by re-run', resolved_at = now() where movement_id = v_m.id and kind = 'unsupported_partial' and status <> 'resolved';
+        perform public.open_exception(p_org, v_m.id, 'amount_mismatch', 'Closest invoice ' || v_nearest_ref || ' from the same counterparty differs by ' || v_nearest_diff::text || ' (tolerance ' || v_org.matching_tolerance::text || '). Link it manually with a reason, or correct the invoice.');
       elsif v_m.identification_status = 'identified' then
         perform public.open_exception(p_org, v_m.id, 'no_invoice', 'No open invoice in the same token, entity and direction is compatible (tolerance ' || v_org.matching_tolerance::text || ').');
       end if;
