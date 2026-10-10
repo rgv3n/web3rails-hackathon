@@ -6,9 +6,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { rowsToCsv, neutralize, sha256 } from "../src/lib/export-csv";
 
-const URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:57321";
-const ANON = process.env.SUPABASE_ANON_KEY ?? "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "LOCAL_SUPABASE_SECRET_KEY";
+import { ANON, SERVICE, URL } from "./env";
 const admin = createClient(URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
 const run = Date.now().toString(36);
 const PW = "test-password-" + run;

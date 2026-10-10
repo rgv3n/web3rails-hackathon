@@ -12,7 +12,8 @@ npm install
 npx supabase start        # local stack on ports 573xx (API 57321, DB 57322, Studio 57323, mail 57324); applies supabase/migrations
 cp .env.example .env.local  # local keys are printed by `supabase start`
 npm run dev               # http://localhost:3000
-npm test                  # 50+ rule tests against the local stack (creates and deletes its own users/orgs)
+export SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2- | tr -d '"')   # tests need the local service-role key (never committed)
+npm test                  # 45 rule tests against the local stack (creates and deletes its own users/orgs)
 npm run build && npm run lint
 ```
 
