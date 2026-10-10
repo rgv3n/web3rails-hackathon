@@ -141,3 +141,22 @@ Cifras reales (wallets, movimientos, sin contexto, excepciones abiertas, aprobad
 ### Qué NO se declara
 - MVP «operativo con cadena real»: falta la credencial de Helius y una primera sincronización verificada con una wallet real.
 - Validación contable del controller y revisión de seguridad externa: fuera de este registro, como dice la especificación.
+
+## Recuperación de contraseña · 10-oct-2026
+
+Rutas nuevas: `/forgot-password` (pedir enlace), `/auth/callback` (intercambia `code` o `token_hash` por sesión y redirige con `Location` relativo), `/reset-password` (exige sesión; `updateUser`). Enlace «Forgot your password?» en `/login`. El alta ahora pasa su `emailRedirectTo` por el mismo callback.
+
+Prueba de extremo a extremo contra Supabase local + Mailpit + `next dev` (script temporal, no commiteado), con el mismo cliente `@supabase/ssr` que usa la acción de servidor:
+
+| Paso | Observado |
+|---|---|
+| Petición de enlace | Correo «Reset your password» en Mailpit; tres cookies `code-verifier` en el navegador que lo pidió |
+| Enlace de Supabase | `/auth/v1/verify?…&type=recovery` → redirige a `/auth/callback?code=…&next=/reset-password` |
+| Callback con la cookie de verificación | 303 `/reset-password`, 1 cookie de sesión |
+| Pantalla | 200 con el formulario «Choose a new password» |
+| `updateUser` con esa sesión | la contraseña antigua deja de valer; la nueva entra |
+| Mismo enlace sin la cookie (otro dispositivo) o reutilizado | `/login?error=link-expired` con aviso en pantalla |
+
+Limitación real: con el mailer por defecto de Supabase el enlace solo funciona en el navegador que lo pidió (PKCE). Las plantillas en `supabase/templates/` (enlace con `token_hash`, válido en cualquier dispositivo) están listas pero el plan Free las rechaza hasta configurar un SMTP propio. El mailer por defecto además limita a unos pocos correos por hora: no sirve para clientes reales.
+
+Nube: usuario owner `rubengl@gmail.com` creado confirmado el 10-oct por API de administración; login comprobado.
