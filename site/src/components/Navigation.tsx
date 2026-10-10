@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { Button } from "./ui";
 import { cn } from "@/lib/cn";
+import { APP_URL } from "@/lib/links";
 
 const links = [
   { href: "/#platform", label: "Platform" },
@@ -71,7 +72,7 @@ export function Navigation() {
           <Button href="/#reconciliation" variant="ghost">
             View demo
           </Button>
-          <Button href="/#platform">Explore the platform</Button>
+          <Button href={APP_URL}>Explore the platform</Button>
         </div>
 
         <button
@@ -101,7 +102,7 @@ export function Navigation() {
               </li>
             ))}
             <li className="mt-2 flex flex-col gap-2 border-t border-line pt-4 pb-2">
-              <Button href="/#platform" size="lg">
+              <Button href={APP_URL} size="lg">
                 Explore the platform
               </Button>
               <Button href="/#reconciliation" variant="secondary" size="lg">

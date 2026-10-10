@@ -1,5 +1,6 @@
 import { Button, Container, Eyebrow } from "./ui";
 import { InfrastructureFlow } from "./InfrastructureFlow";
+import { APP_URL } from "@/lib/links";
 
 export function Hero() {
   return (
@@ -15,7 +16,7 @@ export function Hero() {
             reporting and financial control.
           </p>
           <div className="fade-up fade-up-3 mt-8 flex flex-wrap items-center gap-3">
-            <Button href="/#platform" size="lg" arrow>
+            <Button href={APP_URL} size="lg" arrow>
               Explore the platform
             </Button>
             <Button href="/#overview" size="lg" variant="secondary">
