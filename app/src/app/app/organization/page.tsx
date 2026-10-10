@@ -72,6 +72,11 @@ export default async function OrganizationPage() {
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {can(ctx, "import") ? <SyncButton walletId={w.id} configured={configured} /> : null}
                       {admin ? (
+                        <Link href={`/app/organization/wallets/${w.id}/verify`} className="text-xs font-medium text-fg hover:underline">
+                          {w.ownership === "verified" ? "Ownership evidence" : "Verify ownership"}
+                        </Link>
+                      ) : null}
+                      {admin ? (
                         <form action={archiveWallet}>
                           <input type="hidden" name="id" value={w.id} />
                           <SubmitButton variant="ghost" className="h-7 px-2 text-xs" pendingText="…">Archive</SubmitButton>

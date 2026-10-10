@@ -41,6 +41,7 @@ export const integrationGroups: IntegrationGroup[] = [
     caption: "Where value settles",
     items: [
       { slug: "solana-wallets", name: "Solana wallets", text: "Read-only sync of stablecoin transfers (USDC, USDT, EURC) for any address you own.", maturity: "building" },
+      { slug: "digital-certificate", name: "Digital certificate (FNMT / eIDAS)", text: "Prove who controls a wallet: the legal representative signs an ownership statement with a qualified certificate (AutoFirma); Web3Rails verifies chain, revocation and identity. Beta, desktop only.", maturity: "available" },
       { slug: "ethereum", name: "Ethereum", text: "ERC-20 stablecoin transfers.", maturity: "planned" },
       { slug: "base", name: "Base", text: "ERC-20 stablecoin transfers.", maturity: "planned" },
     ],

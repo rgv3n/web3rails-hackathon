@@ -160,3 +160,32 @@ Prueba de extremo a extremo contra Supabase local + Mailpit + `next dev` (script
 Limitación real: con el mailer por defecto de Supabase el enlace solo funciona en el navegador que lo pidió (PKCE). Las plantillas en `supabase/templates/` (enlace con `token_hash`, válido en cualquier dispositivo) están listas pero el plan Free las rechaza hasta configurar un SMTP propio. El mailer por defecto además limita a unos pocos correos por hora: no sirve para clientes reales.
 
 Nube: usuario owner `rubengl@gmail.com` creado confirmado el 10-oct por API de administración; login comprobado.
+
+## Verificación de propiedad de wallet con certificado digital · 10-oct-2026
+
+Rutas nuevas: `/app/organization/wallets/[id]/verify` (pantalla), `POST /api/attestations` (emite la declaración con nonce, 15 min), `POST /api/attestations/[id]/verify` (verifica la CAdES y registra el veredicto). Migración `20261010200000_wallet_attestations.sql`: tabla `wallet_ownership_attestations`, funciones `issue_wallet_attestation` (admin) y `record_wallet_attestation` (admin + prueba HMAC). Catálogo: «Digital certificate (FNMT / eIDAS)» disponible en beta.
+
+Diseño de confianza: el servidor Next verifica firma, cadena, OCSP e identidad (`src/lib/attestation/verify-cades.ts`) y firma su veredicto con HMAC-SHA256 (`ATTESTATION_HMAC_SECRET`); la función SQL recalcula el HMAC con el mismo secreto guardado en Supabase Vault (`attestation_hmac`) y rechaza cualquier veredicto sin prueba válida. El front office sigue sin usar la clave de servicio. Perfiles: `qualified` (raíz FNMT, OCSP obligatorio) para organizaciones reales; `demo` (añade la CA inventada «Web3Rails Demo Root», sin OCSP, etiquetado) solo cuando `organizations.is_demo`.
+
+### Pruebas automáticas
+`npm test` → **50 pruebas, 50 en verde** (5 nuevas en `tests/attestation.test.ts`, firmas producidas con openssl y el certificado demo publicado en `public/demo-certificate/`).
+
+| Regla | Observado |
+|---|---|
+| Emitir exige admin | operador → `FORBIDDEN`; la declaración lleva la wallet y un nonce de 24 hex; perfil `qualified` o `demo` según la organización |
+| Certificado demo | aceptado en organización demo (ancla `demo`, OCSP omitido y etiquetado); rechazado en organización real («no termina en una autoridad confiable»); rechazado si el contenido incrustado difiere del emitido |
+| Veredicto sin prueba HMAC válida | `FORBIDDEN: verdict proof does not match` (prueba para otro firmante, o basura); la wallet sigue `declared` |
+| Operador con prueba válida | `FORBIDDEN` (solo admin) |
+| Veredicto genuino | wallet `verified`, `ownership_evidence = attestation:<id>`, atestación con firmante y certificado, evento `wallet ownership_verified` |
+| Repetición de la misma atestación | `CONFLICT: attestation already verified` |
+| Veredicto rechazado | se registra con motivos y evento `ownership_verification_rejected`; la wallet no cambia |
+| Declaración caducada | estado `expired` persistido; la ruta devuelve 410 |
+
+### Recorrido real en local (script temporal, no commiteado)
+Organización demo creada por API → página de verificación renderiza con el aviso demo → `POST /api/attestations` → la declaración se firma con **Autofirma 1.9 real** (CLI, mismo motor que el navegador) y el certificado demo → `POST …/verify` → `verified`, firmante «00000000T MARIA EJEMPLO (R: B00000000)», cadena «… > Web3Rails Demo Root» → en BD `ownership = verified` → la página muestra «Verified» y el firmante → la lista de wallets enlaza «Ownership evidence» → reenviar la misma firma: 409 → la misma firma en una organización real: `rejected`, wallet sigue `declared`.
+
+### Limitaciones reales
+- No probado desde el navegador con Autofirma (requiere instalación con permisos de sistema en esta máquina). El cliente web es el oficial (`public/autofirma/autoscript.js`, modo WebSocket). Prueba pendiente en el equipo de Rubén con su certificado real.
+- Solo escritorio; sin firma de la wallet Solana (segunda firma) todavía: la evidencia es la del certificado.
+- Un certificado de persona física pasa la verificación y queda marcado `natural_person` (sin CIF); la pantalla lo dice. La política «solo representante de persona jurídica» es una decisión de producto pendiente.
+- La validación de cadena de pkijs no evalúa políticas de certificación ni QCStatements eIDAS; se confía en el ancla (raíz FNMT).

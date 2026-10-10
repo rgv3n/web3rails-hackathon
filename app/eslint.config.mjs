@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party script served as-is (official @firma client), not our code.
+    "public/**",
   ]),
 ]);
 
