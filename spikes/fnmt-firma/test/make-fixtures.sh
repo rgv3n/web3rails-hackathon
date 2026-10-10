@@ -32,4 +32,5 @@ openssl cms -sign -binary -in ownership.json -signer revoked-leaf.pem -inkey lea
 openssl cms -sign -binary -in ownership.json -signer rogue-leaf.pem -inkey rogue-leaf.key -md sha256 -outform DER -out ownership.rogue.der 2>/dev/null
 # Tampered payload (signature made over the original)
 sed 's/c0ffee-0001/c0ffee-0002/' ownership.json > ownership.tampered.json
+mkdir -p ../trusted && cp root.pem ../trusted/root.pem
 echo "fixtures ready:"; ls -1
