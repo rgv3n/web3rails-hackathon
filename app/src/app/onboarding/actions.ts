@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { setActiveOrganization } from "@/app/app/actions";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/org";
 
@@ -17,12 +18,14 @@ export async function createOrganization(_prev: OnboardingState, formData: FormD
 
   const supabase = await createClient();
   const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 6)}`;
-  const { error } = await supabase.rpc("create_organization", {
+  const { data: orgId, error } = await supabase.rpc("create_organization", {
     p_name: name,
     p_slug: slug,
     p_base_currency: baseCurrency,
     p_timezone: timezone,
   });
   if (error) return { error: error.message };
+  // The new organization becomes the active one.
+  if (typeof orgId === "string") await setActiveOrganization(orgId);
   redirect("/app");
 }

@@ -189,3 +189,7 @@ Organización demo creada por API → página de verificación renderiza con el 
 - Solo escritorio; sin firma de la wallet Solana (segunda firma) todavía: la evidencia es la del certificado.
 - Un certificado de persona física pasa la verificación y queda marcado `natural_person` (sin CIF); la pantalla lo dice. La política «solo representante de persona jurídica» es una decisión de producto pendiente.
 - La validación de cadena de pkijs no evalúa políticas de certificación ni QCStatements eIDAS; se confía en el ancla (raíz FNMT).
+
+## Selector de organización · 10-oct-2026
+
+Hallazgo en producción: el owner tenía tres organizaciones (dos creadas por él y la demo) y la app mostraba siempre la más antigua, así que la wallet de la demo daba 404. Ahora `requireOrg` lee la cookie `w3r_org`, la valida contra las membresías del usuario y cae a la más antigua si no es válida; el selector aparece en la barra lateral y en móvil cuando hay más de una; crear una organización la activa. Probado en local: sin cookie → primera; cookie de la segunda → segunda; cookie de una organización ajena → primera (ignorada). Sin pruebas automáticas nuevas (comportamiento de interfaz).

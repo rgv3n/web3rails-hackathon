@@ -4,6 +4,7 @@ import { AppNav } from "./AppNav";
 import { Logo } from "@/components/Logo";
 import { signOut } from "../(auth)/actions";
 import { Badge } from "@/components/ui";
+import { OrgSwitcher } from "./OrgSwitcher";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireOrg();
@@ -19,6 +20,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <span className="capitalize">{ctx.role}</span>
             {ctx.org.is_demo ? <Badge tone="accent">Demo data</Badge> : null}
           </p>
+          <OrgSwitcher organizations={ctx.organizations} activeId={ctx.org.id} />
         </div>
         <AppNav />
         <form action={signOut} className="mt-auto border-t border-line px-5 py-3">
@@ -34,6 +36,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           </form>
         </header>
         <div className="md:hidden">
+          {ctx.organizations.length > 1 ? (
+            <div className="border-b border-line bg-surface px-4 py-2">
+              <OrgSwitcher organizations={ctx.organizations} activeId={ctx.org.id} compact />
+            </div>
+          ) : null}
           <AppNav horizontal />
         </div>
         <main id="main" className="flex-1 px-4 py-6 md:px-8 md:py-8">

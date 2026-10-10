@@ -1,15 +1,29 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+
+/** Cookie that remembers which of the user's organizations is active. Validated against memberships on every request. */
+export const ORG_COOKIE = "w3r_org";
 
 export type Role = "admin" | "operator" | "reviewer" | "auditor";
 export type Capability = "manage_org" | "import" | "edit_context" | "approve" | "read";
 
+export interface OrgSummary {
+  id: string;
+  name: string;
+  slug: string;
+  base_currency: string;
+  timezone: string;
+  is_demo: boolean;
+}
 export interface OrgContext {
   userId: string;
   email: string | undefined;
-  org: { id: string; name: string; slug: string; base_currency: string; timezone: string; is_demo: boolean };
+  org: OrgSummary;
   role: Role;
   financialRole: Role | null;
+  /** Every organization the user belongs to, oldest first (for the switcher). */
+  organizations: OrgSummary[];
 }
 
 /** Effective roles = membership role ∪ explicit financial role. Mirrors public.has_role in the database. */
@@ -34,7 +48,10 @@ export function can(ctx: Pick<OrgContext, "role" | "financialRole">, cap: Capabi
   }
 }
 
-/** The signed-in user's first organization. Redirects to onboarding when there is none. */
+/**
+ * The active organization: the one named by the ORG_COOKIE if the user is a member of it, otherwise the oldest membership.
+ * Redirects to onboarding when the user belongs to none.
+ */
 export async function requireOrg(): Promise<OrgContext> {
   const supabase = await createClient();
   const {
@@ -46,13 +63,20 @@ export async function requireOrg(): Promise<OrgContext> {
     .from("memberships")
     .select("role, financial_role, organizations(id, name, slug, base_currency, timezone, is_demo)")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
+  const rows = (data ?? []).filter((r) => r.organizations) as unknown as Array<{ role: Role; financial_role: Role | null; organizations: OrgSummary }>;
+  if (rows.length === 0) redirect("/onboarding");
 
-  const org = data?.organizations as unknown as OrgContext["org"] | null;
-  if (!data || !org) redirect("/onboarding");
-  return { userId: user.id, email: user.email, org, role: data.role as Role, financialRole: (data.financial_role as Role | null) ?? null };
+  const wanted = (await cookies()).get(ORG_COOKIE)?.value;
+  const active = rows.find((r) => r.organizations.id === wanted) ?? rows[0];
+  return {
+    userId: user.id,
+    email: user.email,
+    org: active.organizations,
+    role: active.role,
+    financialRole: active.financial_role ?? null,
+    organizations: rows.map((r) => r.organizations),
+  };
 }
 
 export function slugify(name: string) {
