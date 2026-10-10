@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { EntityForm, WalletForm } from "./forms";
 import { archiveWallet } from "./actions";
 import { SyncButton } from "./SyncButton";
+import { ConnectPhantom } from "./ConnectPhantom";
 import { heliusConfigured } from "@/lib/helius";
 import Link from "next/link";
 
@@ -16,7 +17,7 @@ export default async function OrganizationPage() {
   const supabase = await createClient();
   const [{ data: entities }, { data: wallets }] = await Promise.all([
     supabase.from("legal_entities").select("id, name, reporting_currency").eq("org_id", ctx.org.id).order("name"),
-    supabase.from("wallets").select("id, label, address, ownership, status, last_synced_at, last_sync_error, sync_cursor, entity:legal_entities(name)").eq("org_id", ctx.org.id).order("created_at"),
+    supabase.from("wallets").select("id, label, address, ownership, status, control_verified_at, last_synced_at, last_sync_error, sync_cursor, entity:legal_entities(name)").eq("org_id", ctx.org.id).order("created_at"),
   ]);
   const admin = can(ctx, "manage_org");
   const configured = heliusConfigured();
@@ -57,7 +58,8 @@ export default async function OrganizationPage() {
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 font-medium">
                       {w.label}
-                      <Badge tone={w.ownership === "verified" ? "ok" : "neutral"}>{w.ownership === "verified" ? "Verified" : "Declared"}</Badge>
+                      <Badge tone={w.ownership === "verified" ? "ok" : "neutral"}>{w.ownership === "verified" ? "Identity verified" : "Declared"}</Badge>
+                      {w.control_verified_at ? <Badge tone="ok">Control proven</Badge> : null}
                       {w.status === "archived" ? <Badge>Archived</Badge> : null}
                     </p>
                     <p className="truncate font-mono text-xs text-fg-muted">
@@ -73,7 +75,7 @@ export default async function OrganizationPage() {
                       {can(ctx, "import") ? <SyncButton walletId={w.id} configured={configured} /> : null}
                       {admin ? (
                         <Link href={`/app/organization/wallets/${w.id}/verify`} className="text-xs font-medium text-fg hover:underline">
-                          {w.ownership === "verified" ? "Ownership evidence" : "Verify ownership"}
+                          {w.ownership === "verified" || w.control_verified_at ? "Ownership evidence" : "Verify ownership"}
                         </Link>
                       ) : null}
                       {admin ? (
@@ -90,7 +92,9 @@ export default async function OrganizationPage() {
             {(wallets ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-fg-muted">No wallets declared.</li> : null}
           </ul>
           {admin ? (
-            <div className="border-t border-line p-5">
+            <div className="space-y-5 border-t border-line p-5">
+              <ConnectPhantom entities={entities ?? []} />
+              <p className="text-xs uppercase tracking-wide text-fg-subtle">or declare an address manually</p>
               <WalletForm entities={entities ?? []} />
             </div>
           ) : (

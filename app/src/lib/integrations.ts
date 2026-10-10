@@ -40,7 +40,7 @@ export const integrationGroups: IntegrationGroup[] = [
     title: "Onchain sources",
     caption: "Where value settles",
     items: [
-      { slug: "solana-wallets", name: "Solana wallets", text: "Read-only sync of stablecoin transfers (USDC, USDT, EURC) for any address you own.", maturity: "building" },
+      { slug: "solana-wallets", name: "Solana wallets", text: "Connect with Phantom or declare any address; read-only sync of stablecoin transfers (USDC, USDT, EURC) through Helius; prove control by signing with the wallet key.", maturity: "building" },
       { slug: "ethereum", name: "Ethereum", text: "ERC-20 stablecoin transfers.", maturity: "planned" },
       { slug: "base", name: "Base", text: "ERC-20 stablecoin transfers.", maturity: "planned" },
     ],

@@ -193,3 +193,20 @@ Organización demo creada por API → página de verificación renderiza con el 
 ## Selector de organización · 10-oct-2026
 
 Hallazgo en producción: el owner tenía tres organizaciones (dos creadas por él y la demo) y la app mostraba siempre la más antigua, así que la wallet de la demo daba 404. Ahora `requireOrg` lee la cookie `w3r_org`, la valida contra las membresías del usuario y cae a la más antigua si no es válida; el selector aparece en la barra lateral y en móvil cuando hay más de una; crear una organización la activa. Probado en local: sin cookie → primera; cookie de la segunda → segunda; cookie de una organización ajena → primera (ignorada). Sin pruebas automáticas nuevas (comportamiento de interfaz).
+
+## Phantom: declarar wallet y probar el control con la clave · 11-oct-2026
+
+Migración `20261011100000_wallet_key_proofs.sql`: `wallet_ownership_attestations.method` (`certificate` | `wallet_key`), `wallets.control_verified_at` y `control_evidence`; `issue_wallet_attestation(p_wallet, p_method)`; `record_wallet_attestation` pone `ownership = verified` si el método es certificado y `control_verified_at` si es la clave de la wallet. Dos pruebas independientes y visibles por separado: «Identity verified» (certificado) y «Control proven» (clave).
+
+Interfaz: en Organization, «Connect Phantom» lee la dirección pública del proveedor inyectado (sin SDK, solo `connect`) y la declara con la entidad y la etiqueta; en la pantalla de verificación de la wallet, «Sign with Phantom» emite la declaración con método `wallet_key`, la firma con `signMessage` y la envía a `POST /api/attestations/[id]/verify-wallet`, que verifica ed25519 con `@noble/ed25519` contra la clave pública de la dirección (base58) y registra el veredicto con la misma prueba HMAC. Phantom debe estar conectado a la misma dirección que la wallet; si no, se avisa y no se firma. Nunca se pide una transacción.
+
+### Pruebas automáticas
+`npm test` → **51 pruebas, 51 en verde** (1 nueva): clave propia → control probado, identidad sin cambios, evento `control_verified`; declaración alterada, clave ajena y firma de longitud incorrecta → rechazadas con motivo.
+
+### Recorrido real en local (par de claves haciendo de Phantom)
+Organization muestra «Connect Phantom» → página de verificación con la tarjeta «Prove control with the wallet key» → emisión `wallet_key` → firma → `verify-wallet` 200 `verified` → `control_verified_at` en BD → la página muestra «Control proven» y la identidad sigue «Declared» → la lista enlaza «Ownership evidence». Fallo encontrado por el recorrido y corregido: la ruta del certificado aceptaba declaraciones de método `wallet_key` (ahora 400 en ambos sentidos). Clave ajena → `rejected` con motivo.
+
+### Limitaciones reales
+- No probado con la extensión Phantom real en un navegador (el proveedor inyectado se ha simulado con un par de claves ed25519, que es lo que Phantom firma). Pendiente en el equipo de Rubén.
+- Solo Phantom (y proveedores que expongan `window.solana.isPhantom`); Solflare, Backpack y Wallet Standard quedan para después.
+- La sincronización con Helius sigue sin ejecutarse contra la cadena.

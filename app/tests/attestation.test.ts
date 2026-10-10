@@ -10,7 +10,12 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ANON, SERVICE, URL } from "./env";
 import { verifyCades } from "../src/lib/attestation/verify-cades";
+import { verifyWalletSignature } from "../src/lib/attestation/verify-wallet-signature";
 import { attestationProof } from "../src/lib/attestation/proof";
+import * as ed from "@noble/ed25519";
+import { sha512 } from "@noble/hashes/sha2.js";
+import bs58 from "bs58";
+ed.hashes.sha512 = sha512;
 
 // .env.local is not loaded by vitest: read the secret the server would use.
 for (const line of readFileSync(".env.local", "utf8").split("\n")) {
@@ -158,5 +163,33 @@ describe("recording verdicts", () => {
     expect((r.data as { status: string }).status).toBe("expired");
     const { data: att } = await admin.from("wallet_ownership_attestations").select("status").eq("id", issued.id).single();
     expect(att!.status).toBe("expired");
+  });
+});
+
+describe("wallet key proof (Phantom signMessage)", () => {
+  it("the wallet's own key signs the statement: control proven, identity untouched; a foreign key or altered statement is rejected", async () => {
+    const priv = ed.utils.randomSecretKey();
+    const address = bs58.encode(ed.getPublicKey(priv));
+    const { data: ent } = await admin.from("legal_entities").select("id").eq("org_id", org).single();
+    const { data: w } = await admin.from("wallets").insert({ org_id: org, entity_id: ent!.id, chain: "solana", address, label: "phantom" }).select("id").single();
+    const { data: issued, error } = await adm.client.rpc("issue_wallet_attestation", { p_wallet: w!.id, p_method: "wallet_key" });
+    expect(error).toBeNull();
+    expect(issued.method).toBe("wallet_key");
+    expect(JSON.parse(issued.statement).method).toBe("wallet_key");
+    const sig = ed.sign(new TextEncoder().encode(issued.statement), priv);
+    expect(verifyWalletSignature({ address, statement: issued.statement, signature: sig }).verdict).toBe("accepted");
+    expect(verifyWalletSignature({ address, statement: issued.statement + " ", signature: sig }).verdict).toBe("rejected");
+    const other = bs58.encode(ed.getPublicKey(ed.utils.randomSecretKey()));
+    expect(verifyWalletSignature({ address: other, statement: issued.statement, signature: sig }).reasons.join()).toMatch(/does not verify/);
+    expect(verifyWalletSignature({ address, statement: issued.statement, signature: sig.slice(0, 63) }).reasons.join()).toMatch(/64 bytes/);
+    const signerJson = JSON.stringify({ kind: "wallet_key", wallet: address });
+    const r = await adm.client.rpc("record_wallet_attestation", { p_id: issued.id, p_verdict: "verified", p_proof: attestationProof(issued.id, "verified", signerJson), p_signer_json: signerJson, p_chain: null, p_ocsp: null, p_reasons: [], p_signature_b64: Buffer.from(sig).toString("base64"), p_certificate_pem: null });
+    expect(r.error).toBeNull();
+    const { data: wallet } = await admin.from("wallets").select("ownership, control_verified_at, control_evidence").eq("id", w!.id).single();
+    expect(wallet!.ownership).toBe("declared");
+    expect(wallet!.control_verified_at).not.toBeNull();
+    expect(wallet!.control_evidence).toBe("attestation:" + issued.id);
+    const { data: ev } = await admin.from("audit_events").select("action").eq("entity_id", w!.id).eq("action", "control_verified");
+    expect(ev).toHaveLength(1);
   });
 });

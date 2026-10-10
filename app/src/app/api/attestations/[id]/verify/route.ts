@@ -17,8 +17,9 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const body = (await request.json().catch(() => ({}))) as { signatureB64?: string };
   if (!body.signatureB64 || body.signatureB64.length > 400_000) return NextResponse.json({ error: "signatureB64 required" }, { status: 400 });
 
-  const { data: att } = await supabase.from("wallet_ownership_attestations").select("id, statement, trust_profile, status, expires_at").eq("id", id).maybeSingle();
+  const { data: att } = await supabase.from("wallet_ownership_attestations").select("id, statement, trust_profile, status, method, expires_at").eq("id", id).maybeSingle();
   if (!att) return NextResponse.json({ error: "Attestation not found" }, { status: 404 });
+  if (att.method !== "certificate") return NextResponse.json({ error: "This statement was issued for a wallet-key signature" }, { status: 400 });
   if (att.status !== "issued") return NextResponse.json({ error: `Attestation already ${att.status}` }, { status: 409 });
 
   let signatureDer: Buffer;

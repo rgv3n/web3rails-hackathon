@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { attestationConfigured } from "@/lib/attestation/proof";
 import { Badge, Card, CardHeader, Notice, PageTitle } from "@/components/ui";
 import { VerifyOwnership } from "./VerifyOwnership";
+import { ProveControl } from "./ProveControl";
 
 export const metadata = { title: "Verify wallet ownership" };
 
@@ -13,7 +14,7 @@ export default async function VerifyWalletPage(props: { params: Promise<{ id: st
   const ctx = await requireOrg();
   const supabase = await createClient();
   const [{ data: wallet }, { data: last }] = await Promise.all([
-    supabase.from("wallets").select("id, label, address, chain, ownership, status, entity:legal_entities(name)").eq("id", id).eq("org_id", ctx.org.id).maybeSingle(),
+    supabase.from("wallets").select("id, label, address, chain, ownership, status, control_verified_at, entity:legal_entities(name)").eq("id", id).eq("org_id", ctx.org.id).maybeSingle(),
     supabase.from("wallet_ownership_attestations").select("id, status, trust_profile, decided_at, signer, chain, ocsp, reasons").eq("wallet_id", id).eq("status", "verified").order("decided_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (!wallet) notFound();
@@ -25,10 +26,10 @@ export default async function VerifyWalletPage(props: { params: Promise<{ id: st
     <div className="mx-auto max-w-3xl">
       <PageTitle
         title="Verify wallet ownership"
-        text="The legal representative signs a statement issued by Web3Rails with a qualified certificate. Web3Rails verifies the signature, the certificate chain, revocation and identity, and keeps the signed statement as evidence."
+        text="Two independent proofs. Legal identity: the representative signs a statement issued by Web3Rails with a qualified certificate. Control: the wallet's own key signs a statement through Phantom. Each one is verified on the server and kept as evidence."
       />
       <Card>
-        <CardHeader title={wallet.label} text={`${ent?.name ?? "—"} · ${wallet.chain}`} action={<Badge tone={wallet.ownership === "verified" ? "ok" : "neutral"}>{wallet.ownership === "verified" ? "Verified" : "Declared"}</Badge>} />
+        <CardHeader title={wallet.label} text={`${ent?.name ?? "—"} · ${wallet.chain}`} action={<span className="flex gap-2"><Badge tone={wallet.ownership === "verified" ? "ok" : "neutral"}>{wallet.ownership === "verified" ? "Identity verified" : "Declared"}</Badge><Badge tone={wallet.control_verified_at ? "ok" : "neutral"}>{wallet.control_verified_at ? "Control proven" : "Control not proven"}</Badge></span>} />
         <div className="px-5 pb-4 font-mono text-xs text-fg-muted">{wallet.address}</div>
         {last && signer ? (
           <div className="border-t border-line px-5 py-4 text-sm">
@@ -49,7 +50,10 @@ export default async function VerifyWalletPage(props: { params: Promise<{ id: st
         ) : !attestationConfigured() ? (
           <Notice tone="warn">Ownership verification is not configured on this server (ATTESTATION_HMAC_SECRET).</Notice>
         ) : (
-          <VerifyOwnership walletId={wallet.id} isDemo={ctx.org.is_demo} alreadyVerified={wallet.ownership === "verified"} />
+          <div className="space-y-6">
+            <ProveControl walletId={wallet.id} address={wallet.address} alreadyProven={Boolean(wallet.control_verified_at)} />
+            <VerifyOwnership walletId={wallet.id} isDemo={ctx.org.is_demo} alreadyVerified={wallet.ownership === "verified"} />
+          </div>
         )}
       </div>
       <p className="mt-6 text-sm text-fg-muted">
