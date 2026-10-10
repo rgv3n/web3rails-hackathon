@@ -2,3 +2,6 @@
 .DS_Store
 *.bak-*
 .git.bak-*
+
+# Credentials Rubén keeps next to the repo: never commit
+/Supabase/
