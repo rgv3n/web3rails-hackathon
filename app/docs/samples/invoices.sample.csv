@@ -1,0 +1,3 @@
+external_ref,counterparty_name,kind,amount,currency,issued_at,due_at,document_ref
+INV-291,Acme Customer SA,receivable,4250.00,USDC,2026-09-10,2026-09-25,drive://invoices/INV-291.pdf
+NW-2026-0912,Northwind Hosting SL,payable,1840.00,USDC,2026-09-15,2026-09-30,

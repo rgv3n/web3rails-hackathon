@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --surface-2: #f1f1ec;
+  --fg: #151b16;
+  --fg-muted: #4b555e;
+  --fg-subtle: #6f7981;
+  --line: #e2e3de;
+  --line-strong: #c9cbc4;
+  --accent: #88c103;
+  --accent-strong: #4f7a00;
+  --accent-soft: #eef7dc;
+  --ink: #0f140f;
+  --ink-2: #161d17;
+  --ink-line: #262f27;
+  --ink-fg: #e8eae6;
+  --ink-muted: #8e98a0;
+  --ok: #1e8e5a;
+  --ok-soft: #e4f4ea;
+  --warn: #9a6614;
+  --warn-soft: #fbf1dc;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0f13;
+    --surface: #11171d;
+    --surface-2: #161d24;
+    --fg: #e8eae6;
+    --fg-muted: #aab3ba;
+    --fg-subtle: #8e98a0;
+    --line: #222b33;
+    --line-strong: #33404a;
+    --accent: #9bd41a;
+    --accent-strong: #b5e34a;
+    --accent-soft: #22300b;
+    --ink: #060809;
+    --ink-2: #0d1216;
+    --ink-line: #1c252c;
+    --ok: #4cc98a;
+    --ok-soft: #103324;
+    --warn: #e0a83a;
+    --warn-soft: #3a2b0c;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-line: var(--ink-line);
+  --color-ink-fg: var(--ink-fg);
+  --color-ink-muted: var(--ink-muted);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Data flowing through rails */
+@keyframes rail-flow {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+.rail-anim {
+  stroke-dasharray: 6 18;
+  animation: rail-flow 2.6s linear infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.fade-up-2 {
+  animation-delay: 90ms;
+}
+.fade-up-3 {
+  animation-delay: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .rail-anim {
+    animation: none;
+    stroke-dasharray: none;
+    opacity: 0.45;
+  }
+  .fade-up {
+    animation: none;
+  }
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
