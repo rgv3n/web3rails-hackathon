@@ -1,0 +1,4 @@
+# Each package keeps its own .gitignore (site/, app/). Root-level only:
+.DS_Store
+*.bak-*
+.git.bak-*
