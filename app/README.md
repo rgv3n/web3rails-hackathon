@@ -71,4 +71,6 @@ Matching is 1:1; partial/grouped payments stay as `unsupported_partial` exceptio
 | Vercel | project `app` on `rgv3n/web3rails`, Root Directory `app/` | Env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public), `HELIUS_API_KEY` (secret, production only). Preview/production `.vercel.app` URLs are behind Vercel SSO. |
 | Domain | `app.web3rails.io` | Pending: CNAME in Cloudflare → Vercel, then add the domain to the project. Until then confirmation emails redirect to a domain that does not resolve (the email is still confirmed; sign in afterwards). |
 
+Demo data on the hosted project (seeded 10-oct-2026 through the app's own RPCs as the owner user): organization **Acme Ltd. (demo)** (`is_demo = true`, badge "Demo data"), two sample wallets, the three rows of `docs/samples/movements.sample.csv` (source `demo`), the two invoices of `docs/samples/invoices.sample.csv`, Northwind context + accepted match, the 4,250 USDC receipt left as a proposal to decide. Re-seed by repeating those imports from the UI; demo organizations only accept demo-labelled data.
+
 Hosted Auth keeps email confirmation and MFA enrolment on (stricter than local dev). The service-role key is never used by this app.
