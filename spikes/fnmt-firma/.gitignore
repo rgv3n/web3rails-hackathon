@@ -1,0 +1,14 @@
+# Nothing private leaves this folder. Synthetic test PKI and signatures are regenerated with test/make-fixtures.sh.
+node_modules/
+test/out/
+real/
+*.key
+*.p12
+*.pfx
+*.der
+*.p7s
+*.csf
+*.jks
+autofirma/
+*.zip
+*.deb

@@ -1,0 +1,17 @@
+{
+  "name": "spike-fnmt-firma",
+  "private": true,
+  "type": "module",
+  "description": "Spike 10-oct-2026: verify eIDAS/FNMT CAdES signatures in Node and bind them to a Solana wallet signature. Not part of the product.",
+  "scripts": {
+    "test:fixtures": "bash test/make-fixtures.sh",
+    "verify": "node verify-cades.mjs"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^3.2.0",
+    "@noble/hashes": "^2.4.0",
+    "asn1js": "^3.0.10",
+    "bs58": "^6.0.0",
+    "pkijs": "^3.4.1"
+  }
+}
