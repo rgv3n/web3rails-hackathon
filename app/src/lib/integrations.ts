@@ -41,9 +41,22 @@ export const integrationGroups: IntegrationGroup[] = [
     caption: "Where value settles",
     items: [
       { slug: "solana-wallets", name: "Solana wallets", text: "Read-only sync of stablecoin transfers (USDC, USDT, EURC) for any address you own.", maturity: "building" },
-      { slug: "digital-certificate", name: "Digital certificate (FNMT / eIDAS)", text: "Prove who controls a wallet: the legal representative signs an ownership statement with a qualified certificate (AutoFirma); Web3Rails verifies chain, revocation and identity. Beta, desktop only.", maturity: "available" },
       { slug: "ethereum", name: "Ethereum", text: "ERC-20 stablecoin transfers.", maturity: "planned" },
       { slug: "base", name: "Base", text: "ERC-20 stablecoin transfers.", maturity: "planned" },
+    ],
+  },
+  {
+    title: "Identity and qualified signatures",
+    caption: "Who controls a wallet, proven with a legal identity. One attestation model; the evidence profile depends on the jurisdiction.",
+    items: [
+      { slug: "fnmt", name: "FNMT (Spain)", text: "The legal representative signs the ownership statement with an FNMT certificate through AutoFirma. Web3Rails verifies signature, chain, revocation (OCSP) and identity (NIF, CIF). Beta, desktop only.", maturity: "available" },
+      { slug: "eu-trusted-list", name: "EU Trusted List (any eIDAS qualified provider)", text: "Accept certificates from every qualified trust service provider in the EU list, not only FNMT: D-Trust, Certum, Certeurope, FINA, eParaksts and the rest. Same flow, broader trust store.", maturity: "planned" },
+      { slug: "cloud-qes", name: "Cloud qualified signatures (CSC API)", text: "Sign from the browser or phone without a local certificate: itsme, Smart-ID, Chave Móvel Digital, D-Trust sign-me, Certum SimplySign and other providers on the Cloud Signature Consortium API.", maturity: "planned" },
+      { slug: "eudi-wallet", name: "EU Digital Identity Wallet (eIDAS 2.0)", text: "Qualified signature and verified company attributes from the European wallet once member states issue it.", maturity: "planned" },
+      { slug: "swiss-zertes", name: "Switzerland (ZertES)", text: "Swiss qualified signatures, interoperable with the EU flow.", maturity: "planned" },
+      { slug: "uk-eidas", name: "United Kingdom (UK eIDAS)", text: "Qualified signatures under the UK regime after Brexit.", maturity: "planned" },
+      { slug: "us-verified-signer", name: "United States: identity-verified signer", text: "No qualified certificates in the US. Ownership is tied to a signer verified by an identity provider (document and biometrics) with an ESIGN-compliant audit trail.", maturity: "planned" },
+      { slug: "us-kyb", name: "United States: company verification (KYB)", text: "Company identity from the EIN, state registries and registry providers, attached to the ownership evidence.", maturity: "planned" },
     ],
   },
   {
