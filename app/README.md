@@ -62,3 +62,13 @@ No valuation source is configured yet: fiat values show as “No valuation”, n
 ## Known limitations (v1)
 
 Matching is 1:1; partial/grouped payments stay as `unsupported_partial` exceptions (grouped operations are v2, see the contract). Fiat invoices cannot be matched without a valuation source. Approval is per record (no batch close yet). Member invitations by email are not built; members are added by an admin through the database or the future backoffice. Exports are regenerated from frozen rows, not stored as files.
+
+## Hosted (since 10-oct-2026)
+
+| Piece | Where | Notes |
+|---|---|---|
+| Supabase | project `Web3rails`, ref `bkexywilygfdnpggsztw`, eu-west-1 | Linked with `npx supabase link`. Migrations: `npx supabase db push`. Auth URLs come from `[remotes.production]` in `supabase/config.toml`: review `npx supabase config diff --project-ref bkexywilygfdnpggsztw` before `config push`. |
+| Vercel | project `app` on `rgv3n/web3rails`, Root Directory `app/` | Env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public), `HELIUS_API_KEY` (secret, production only). Preview/production `.vercel.app` URLs are behind Vercel SSO. |
+| Domain | `app.web3rails.io` | Pending: CNAME in Cloudflare → Vercel, then add the domain to the project. Until then confirmation emails redirect to a domain that does not resolve (the email is still confirmed; sign in afterwards). |
+
+Hosted Auth keeps email confirmation and MFA enrolment on (stricter than local dev). The service-role key is never used by this app.
