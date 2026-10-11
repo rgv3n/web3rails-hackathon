@@ -53,9 +53,20 @@ export default async function IntegrationsPage() {
           />
           <div className="p-5">
             <Notice>
-              The REST API is in development. Keys you create now will work against it when it ships; until then they are inert. Base URL
-              will be <span className="font-mono">https://api.web3rails.io</span>.
+              Keys work today with the <strong>MCP server</strong> (read-only): point your AI assistant at{" "}
+              <span className="font-mono">https://app.web3rails.io/api/mcp</span> with the key as a bearer token. The REST API is in development.
             </Notice>
+            <pre className="mt-3 overflow-auto rounded-md bg-surface-2 p-3 font-mono text-xs">{`{
+  "mcpServers": {
+    "web3rails": {
+      "url": "https://app.web3rails.io/api/mcp",
+      "headers": { "Authorization": "Bearer w3r_live_…" }
+    }
+  }
+}`}</pre>
+            <p className="mt-2 text-xs text-fg-muted">
+              Claude Code: <span className="font-mono">claude mcp add --transport http web3rails https://app.web3rails.io/api/mcp --header &quot;Authorization: Bearer w3r_live_…&quot;</span>. Tools: whoami, get_overview, list_movements, get_movement, list_reconciliation_queue, list_exceptions, list_wallets, get_wallet_evidence, list_exports. Every call is recorded in the audit log as actor “api” with the key prefix.
+            </p>
             {canManage ? (
               <div className="mt-5">
                 <CreateKeyForm />

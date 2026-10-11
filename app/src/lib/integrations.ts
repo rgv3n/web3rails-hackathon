@@ -31,6 +31,7 @@ export const integrationGroups: IntegrationGroup[] = [
     title: "Direct integration",
     caption: "Connect Web3Rails to your own systems",
     items: [
+      { slug: "mcp", name: "MCP server for AI assistants", text: "Connect Claude, ChatGPT or any MCP-capable assistant to your organization with an API key: overview, movements, reconciliation queue, exceptions, wallets with their ownership evidence, exports and anchors. Read-only; every call is audited. Beta.", maturity: "available" },
       { slug: "rest-api", name: "REST API", text: "Read normalized transactions, reconciliations, wallets and exceptions. Confirm or override matches.", maturity: "building" },
       { slug: "webhooks", name: "Webhooks", text: "transaction.detected · reconciliation.completed · reconciliation.requires_review", maturity: "planned" },
       { slug: "sdk-typescript", name: "TypeScript SDK", text: "Typed client generated from the API schema.", maturity: "planned" },

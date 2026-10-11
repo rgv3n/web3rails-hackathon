@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/signup", "/forgot-password", "/auth"];
+const PUBLIC = ["/login", "/signup", "/forgot-password", "/auth", "/api/mcp", "/.well-known"]; // /api/mcp authenticates with API keys, not sessions
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
