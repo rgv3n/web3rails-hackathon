@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapHeliusTx, type HeliusTx, type KnownToken } from "../src/lib/helius";
+import { extractMemo, mapHeliusTx, type HeliusTx, type KnownToken } from "../src/lib/helius";
 
 const WALLET = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
 const OTHER = "7Zb1bGi32pfsrBkzWdqd4dFhUXvkCe4b9NYSfx9GVkDT";
@@ -40,5 +40,18 @@ describe("Helius mapper (exact amounts, no guessing)", () => {
     const bad = mapHeliusTx(tx([{ user: WALLET, raw: "1", decimals: 9 }, { user: OTHER, raw: "-1", decimals: 9 }]), WALLET, known);
     expect(bad.rows).toEqual([]);
     expect(bad.skipped[0]).toMatch(/decimals/);
+  });
+});
+
+describe("memo / payment reference (Solana Pay convention)", () => {
+  const MEMO = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+  it("reads the memo program data (base58 or plain) and carries it on the row", () => {
+    const b58 = "3Ut6rBgtS8sZ"; // base58 of "INV-291"
+    const t = tx([{ user: OTHER, raw: "-100" }, { user: WALLET, raw: "100" }], { instructions: [{ programId: "11111111111111111111111111111111", data: "x" }, { programId: MEMO, data: b58 }] });
+    expect(extractMemo(t)).toBe("INV-291");
+    expect(mapHeliusTx(t, WALLET, known).rows[0]).toMatchObject({ memo: "INV-291" });
+    expect(extractMemo(tx([], { instructions: [{ programId: MEMO, data: "plain text memo" }] }))).toBe("plain text memo");
+    expect(extractMemo(tx([], { instructions: [] }))).toBeNull();
+    expect(mapHeliusTx(tx([{ user: OTHER, raw: "-100" }, { user: WALLET, raw: "100" }]), WALLET, known).rows[0]).not.toHaveProperty("memo");
   });
 });

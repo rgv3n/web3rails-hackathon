@@ -230,3 +230,15 @@ Entidad con CIF B99999999 → `rejected`: «the certificate represents tax id B0
 - Organización unipersonal automática para particulares (decisión de producto; la política ya soporta `natural_person`).
 - Sello de tiempo CAdES-T.
 - La organización demo en la nube recibe `tax_id = B00000000` con la migración.
+
+## Anclaje de cierres en Solana y lectura del memo · 11-oct-2026
+
+- **Anclaje.** `exports.anchor_cluster / anchor_signature / anchor_memo / anchored_at` y `record_export_anchor` (admin o revisor; exige checksum; una sola vez por exportación; evento `export anchored`). `src/lib/solana-anchor.ts` envía una transacción con una sola instrucción del programa Memo: `web3rails:export:<id>:<sha256>`. Sin datos personales. Clave del emisor en `SOLANA_ANCHOR_SECRET_KEY` (solo servidor), clúster en `SOLANA_CLUSTER` (devnet para el hackathon), RPC en `SOLANA_RPC_URL`. Botón «Anchor on Solana» en Exports; la firma enlaza al explorador. Es la primera y única escritura en cadena del producto, aprobada por Rubén el 11-oct.
+- **Memo.** El mapeador de Helius lee la instrucción del programa Memo (base58 o texto) y la guarda en la fila (`movements.raw.memo`). `run_matching` usa el memo como referencia cuando el operador no ha registrado ninguna (`20261011180000_memo_reference.sql`): un pago con memo `INV-291` casa por `reference_exact` sin intervención.
+
+### Pruebas automáticas
+`npm test`: prueba nueva del memo (base58 → «INV-291», texto plano, sin memo → sin campo). El anclaje real contra devnet no está en la suite (red externa): se verifica a mano y queda registrado abajo cuando la clave tenga saldo.
+
+### Pendiente
+- Fondear la clave de anclaje de devnet (faucet.solana.com). Sin saldo el botón devuelve el error de Solana, no simula nada.
+- Mostrar el memo en el detalle del movimiento.

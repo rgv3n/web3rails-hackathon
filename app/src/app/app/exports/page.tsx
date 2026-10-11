@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge, Card, CardHeader, Notice, PageTitle } from "@/components/ui";
 import { EXPORT_COLUMNS_V1 } from "@/lib/export-csv";
 import { ExportForm } from "./ExportForm";
+import { AnchorButton } from "./AnchorButton";
+import { anchorConfigured, anchorCluster, explorerTxUrl } from "@/lib/solana-anchor";
 
 export const metadata = { title: "Exports" };
 
@@ -13,7 +15,7 @@ export default async function ExportsPage() {
   const canExport = can(ctx, "approve") || can(ctx, "manage_org");
   const [{ data: entities }, { data: exportsList }, { count: approved }, { count: pending }] = await Promise.all([
     supabase.from("legal_entities").select("id, name").eq("org_id", ctx.org.id).order("name"),
-    supabase.from("exports").select("id, period_from, period_to, record_count, schema_version, checksum_sha256, status, created_at, entity:legal_entities(name), author:profiles!exports_created_by_fkey(full_name)").eq("org_id", ctx.org.id).order("created_at", { ascending: false }).limit(50),
+    supabase.from("exports").select("id, period_from, period_to, record_count, schema_version, checksum_sha256, status, created_at, anchor_cluster, anchor_signature, anchored_at, entity:legal_entities(name), author:profiles!exports_created_by_fkey(full_name)").eq("org_id", ctx.org.id).order("created_at", { ascending: false }).limit(50),
     supabase.from("movements").select("id", { count: "exact", head: true }).eq("org_id", ctx.org.id).eq("review_status", "approved"),
     supabase.from("movements").select("id", { count: "exact", head: true }).eq("org_id", ctx.org.id).neq("review_status", "approved"),
   ]);
@@ -38,7 +40,7 @@ export default async function ExportsPage() {
         {exportsList && exportsList.length > 0 ? (
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-fg-muted">
-              <tr className="border-b border-line"><th className="px-5 py-2.5 font-medium">Created</th><th className="px-5 py-2.5 font-medium">Period</th><th className="px-5 py-2.5 font-medium">Entity</th><th className="px-5 py-2.5 text-right font-medium">Records</th><th className="px-5 py-2.5 font-medium">Checksum</th><th className="px-5 py-2.5 font-medium">By</th><th className="px-5 py-2.5" /></tr>
+              <tr className="border-b border-line"><th className="px-5 py-2.5 font-medium">Created</th><th className="px-5 py-2.5 font-medium">Period</th><th className="px-5 py-2.5 font-medium">Entity</th><th className="px-5 py-2.5 text-right font-medium">Records</th><th className="px-5 py-2.5 font-medium">Checksum</th><th className="px-5 py-2.5 font-medium">By</th><th className="px-5 py-2.5 font-medium">Solana anchor</th><th className="px-5 py-2.5" /></tr>
             </thead>
             <tbody className="divide-y divide-line">
               {exportsList.map((e) => {
@@ -52,6 +54,17 @@ export default async function ExportsPage() {
                     <td className="tabular px-5 py-2 text-right font-mono text-xs">{e.record_count}</td>
                     <td className="px-5 py-2 font-mono text-xs text-fg-muted" title={e.checksum_sha256 ?? ""}>{e.checksum_sha256 ? e.checksum_sha256.slice(0, 12) + "…" : <Badge tone="warn">no checksum</Badge>}</td>
                     <td className="px-5 py-2">{by?.full_name ?? "—"}</td>
+                    <td className="px-5 py-2 text-xs">
+                      {e.anchor_signature ? (
+                        <a href={explorerTxUrl(e.anchor_signature, (e.anchor_cluster as "devnet" | "mainnet-beta" | null) ?? anchorCluster())} target="_blank" rel="noreferrer" className="font-mono text-fg hover:underline" title={e.anchor_signature}>
+                          {e.anchor_signature.slice(0, 10)}… <Badge tone="ok">{e.anchor_cluster}</Badge>
+                        </a>
+                      ) : canExport && e.checksum_sha256 ? (
+                        <AnchorButton exportId={e.id} configured={anchorConfigured()} />
+                      ) : (
+                        <span className="text-fg-subtle">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-2 text-right"><a href={`/app/exports/${e.id}/download`} className="font-medium hover:underline">Download CSV</a></td>
                   </tr>
                 );
