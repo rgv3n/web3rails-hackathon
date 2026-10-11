@@ -1,7 +1,7 @@
 /**
  * Helius Enhanced Transactions adapter (read-only). Maps token balance changes of KNOWN stablecoin mints
  * into import rows for `import_movements`. Amounts come from `rawTokenAmount` (integer string), never from floats.
- * Docs: GET https://api.helius.xyz/v0/addresses/{address}/transactions?api-key=…&limit=100&before=…&until=…
+ * Docs: GET https://api.helius.xyz/v0/addresses/{address}/transactions?api-key=…&limit=100&token-accounts=balanceChanged&before=…&until=…
  */
 import { isSolanaAddress, isSolanaSignature } from "@/lib/solana";
 
@@ -90,6 +90,9 @@ export async function fetchHeliusPage(apiKey: string, address: string, opts: { b
   const url = new URL(`https://api.helius.xyz/v0/addresses/${address}/transactions`);
   url.searchParams.set("api-key", apiKey);
   url.searchParams.set("limit", String(opts.limit ?? 100));
+  // Incoming SPL transfers usually touch only the wallet's token account (ATA), not its pubkey; the default
+  // ("none") would miss most receipts. "balanceChanged" adds every tx where a token account it owns changed.
+  url.searchParams.set("token-accounts", "balanceChanged");
   if (opts.before) url.searchParams.set("before", opts.before);
   if (opts.until) url.searchParams.set("until", opts.until);
   const retries = opts.retries ?? 3;
