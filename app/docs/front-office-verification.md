@@ -210,3 +210,23 @@ Organization muestra «Connect Phantom» → página de verificación con la tar
 - No probado con la extensión Phantom real en un navegador (el proveedor inyectado se ha simulado con un par de claves ed25519, que es lo que Phantom firma). Pendiente en el equipo de Rubén.
 - Solo Phantom (y proveedores que expongan `window.solana.isPhantom`); Solflare, Backpack y Wallet Standard quedan para después.
 - La sincronización con Helius sigue sin ejecutarse contra la cadena.
+
+## Identidad atada al CIF, declaración neutra y pruebas enlazadas · 11-oct-2026 (revisión de Ignacio Montoya)
+
+Migración `20261011150000_identity_binding.sql`: `legal_entities.tax_id`, `tax_id_country`, `subject_type` (`legal_entity` | `natural_person`); `wallet_ownership_attestations.linked_attestation_id` y `ocsp_response_der`; `create_organization(…, p_tax_id, p_subject_type)`; `issue_wallet_attestation(p_wallet, p_method, p_link)`; `record_wallet_attestation(…, p_ocsp_der)`.
+
+- **Declaración neutra (v2).** «The holder of the signing certificate declares that the wallet X is controlled by <entidad> (tax id <CIF>)». No presupone quién firma; el tipo de firmante se registra al verificar.
+- **Política del firmante** (`src/lib/attestation/policy.ts`, aplicada en la ruta tras la criptografía): entidad `legal_entity` → certificado de representante con `organizationIdentifier` igual al CIF de la entidad; `natural_person` → NIF del certificado igual al identificador de la persona; sin CIF en la entidad → rechazo con motivo. Prefijos ETSI (`VATES-`, `IDCES-`…) normalizados.
+- **Pruebas enlazadas.** La declaración de clave de wallet puede emitirse con `link` a una atestación de certificado ya verificada: lleva `certificate_attestation_id` y `certificate_signature_sha256` (SHA-256 de la CAdES), de modo que la clave acepta exactamente lo que firmó el representante. Solo se admite si la atestación enlazada es del mismo wallet, método certificado y verificada.
+- **Evidencia duradera.** Se guarda la respuesta OCSP firmada (DER, base64). Sello de tiempo (CAdES-T): hoja de ruta.
+
+### Pruebas automáticas
+`npm test` → **55 pruebas, 55 en verde** (4 nuevas): normalización de identificadores; política para empresa (CIF igual pasa; otro CIF, certificado personal o sin CIF fallan) y para persona física; enlace: antes de verificar el certificado se rechaza, después la declaración lleva el hash correcto, al registrarla queda `linked_attestation_id` y la wallet con identidad verificada y control probado; enlace a atestación de otro wallet rechazado.
+
+### Recorrido por las rutas (firma real de Autofirma con el certificado demo)
+Entidad con CIF B99999999 → `rejected`: «the certificate represents tax id B00000000, not B99999999», wallet sigue `declared`. Entidad con B00000000 → `verified`, firmante `company_representative VATES-B00000000`. Declaración de clave enlazada → `verified`, la página muestra «linked to this certificate signature» y el CIF.
+
+### Pendiente
+- Organización unipersonal automática para particulares (decisión de producto; la política ya soporta `natural_person`).
+- Sello de tiempo CAdES-T.
+- La organización demo en la nube recibe `tax_id = B00000000` con la migración.

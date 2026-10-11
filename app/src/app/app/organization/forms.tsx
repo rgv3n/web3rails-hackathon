@@ -8,9 +8,18 @@ import { SubmitButton } from "@/components/SubmitButton";
 export function EntityForm() {
   const [state, action] = useActionState<OrgAdminState, FormData>(createEntity, {});
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-[1fr_120px_auto] sm:items-end">
+    <form action={action} className="grid gap-3 sm:grid-cols-[1fr_150px_150px_120px_auto] sm:items-end">
       <Field label="New entity">
         <Input name="name" required placeholder="Acme Ltd. (UK)" />
+      </Field>
+      <Field label="Tax id (CIF/NIF)" hint="Compared with the signer's certificate.">
+        <Input name="tax_id" placeholder="B12345674" className="font-mono" />
+      </Field>
+      <Field label="Type">
+        <Select name="subject_type" defaultValue="legal_entity">
+          <option value="legal_entity">Company</option>
+          <option value="natural_person">Natural person</option>
+        </Select>
       </Field>
       <Field label="Reporting">
         <Select name="reporting_currency" defaultValue="EUR">
@@ -19,8 +28,8 @@ export function EntityForm() {
         </Select>
       </Field>
       <SubmitButton variant="secondary" pendingText="Adding…">Add entity</SubmitButton>
-      {state.error ? <div className="sm:col-span-3"><Notice tone="warn">{state.error}</Notice></div> : null}
-      {state.ok ? <div className="sm:col-span-3"><Notice tone="ok">{state.ok}</Notice></div> : null}
+      {state.error ? <div className="sm:col-span-5"><Notice tone="warn">{state.error}</Notice></div> : null}
+      {state.ok ? <div className="sm:col-span-5"><Notice tone="ok">{state.ok}</Notice></div> : null}
     </form>
   );
 }

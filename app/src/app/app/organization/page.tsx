@@ -16,7 +16,7 @@ export default async function OrganizationPage() {
   const ctx = await requireOrg();
   const supabase = await createClient();
   const [{ data: entities }, { data: wallets }] = await Promise.all([
-    supabase.from("legal_entities").select("id, name, reporting_currency").eq("org_id", ctx.org.id).order("name"),
+    supabase.from("legal_entities").select("id, name, reporting_currency, tax_id, subject_type").eq("org_id", ctx.org.id).order("name"),
     supabase.from("wallets").select("id, label, address, ownership, status, control_verified_at, last_synced_at, last_sync_error, sync_cursor, entity:legal_entities(name)").eq("org_id", ctx.org.id).order("created_at"),
   ]);
   const admin = can(ctx, "manage_org");
@@ -36,7 +36,7 @@ export default async function OrganizationPage() {
             {(entities ?? []).map((e) => (
               <li key={e.id} className="flex items-center justify-between px-5 py-2.5 text-sm">
                 <span>{e.name}</span>
-                <span className="font-mono text-xs text-fg-muted">{e.reporting_currency}</span>
+                <span className="font-mono text-xs text-fg-muted">{e.tax_id ? `${e.tax_id} · ` : "no tax id · "}{e.subject_type === "natural_person" ? "person · " : ""}{e.reporting_currency}</span>
               </li>
             ))}
           </ul>
