@@ -55,10 +55,10 @@ export function VerifyOwnership({ walletId, isDemo, alreadyVerified }: { walletI
       {isDemo ? (
         <Notice tone="warn">
           Demo organization: besides FNMT certificates, this organization accepts the Web3Rails demo certificate.{" "}
-          <a className="font-medium underline" href="/demo-certificate/demo-representative.p12">Download demo-representative.p12</a> (password <code>demo1234</code>, holder MARIA EJEMPLO, fictitious). Load it in AutoFirma as a PKCS#12 keystore. Real organizations reject it.
+          <a className="font-medium underline" href="/demo-certificate/demo-representative.p12">Download demo-representative.p12</a> (password <code>demo1234</code>, holder MARIA EJEMPLO, fictitious). Double-click it to import it into your system keystore (Windows certificate store or macOS Keychain); AutoFirma will then list it. Real organizations reject it.
         </Notice>
       ) : null}
-      <Notice>Requires the AutoFirma desktop application (firmaelectronica.gob.es) and a certificate on this computer. The statement expires 15 minutes after it is issued.</Notice>
+      <Notice>Desktop only. Requires the AutoFirma application (firmaelectronica.gob.es) and a certificate on this computer. The first time, your browser asks to open AutoFirma: accept. The statement expires 15 minutes after it is issued.</Notice>
       {alreadyVerified ? <Notice tone="ok">This wallet is already verified. Signing again adds a newer attestation.</Notice> : null}
 
       <Card>
