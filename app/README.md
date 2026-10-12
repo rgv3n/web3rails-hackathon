@@ -13,7 +13,7 @@ npx supabase start        # local stack on ports 573xx (API 57321, DB 57322, Stu
 cp .env.example .env.local  # local keys are printed by `supabase start`
 npm run dev               # http://localhost:3000
 export SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2- | tr -d '"')   # tests need the local service-role key (never committed)
-npm test                  # 56 rule tests against the local stack (creates and deletes its own users/orgs)
+npm test                  # 57 rule tests against the local stack. After `npx supabase db reset`, run scripts/local-hmac-secret.sh (the reset wipes the Vault secret the attestation tests need) (creates and deletes its own users/orgs)
 npm run build && npm run lint
 ```
 
