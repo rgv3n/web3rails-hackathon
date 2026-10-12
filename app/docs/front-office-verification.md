@@ -242,3 +242,28 @@ Entidad con CIF B99999999 → `rejected`: «the certificate represents tax id B0
 ### Pendiente
 - Fondear la clave de anclaje de devnet (faucet.solana.com). Sin saldo el botón devuelve el error de Solana, no simula nada.
 - Mostrar el memo en el detalle del movimiento.
+
+## Servidor MCP (lectura) · 11-oct-2026
+
+`POST https://app.web3rails.io/api/mcp` (Streamable HTTP, sin sesiones), `mcp-handler` 2.x sobre `@modelcontextprotocol/server`. Autenticación: la clave de API de la organización como bearer (`w3r_live_…`), resuelta por hash contra `api_keys`; claves revocadas o desconocidas → 401 con `WWW-Authenticate`. Ámbito `read` obligatorio.
+
+Plano: el MCP es el único módulo del front office que usa la clave de servicio (`src/lib/mcp/service.ts`), porque sirve a una organización sin usuario. Toda consulta filtra por `org_id` de la clave; no hay escritura financiera. Cada llamada queda en `audit_events` como `actor_kind = 'api'` con `api_key_id` (migración `20261011200000_api_actor.sql`).
+
+Herramientas: `whoami`, `get_overview`, `list_movements`, `get_movement`, `list_reconciliation_queue`, `list_exceptions`, `list_wallets`, `get_wallet_evidence`, `list_exports`. Importes como decimales exactos. La verificación de propiedad no se puede hacer por MCP (Autofirma y Phantom viven en el navegador): `list_wallets` devuelve la URL para hacerlo.
+
+Conexión: `{ "mcpServers": { "web3rails": { "url": "https://app.web3rails.io/api/mcp", "headers": { "Authorization": "Bearer w3r_live_…" } } } }` o `claude mcp add --transport http web3rails https://app.web3rails.io/api/mcp --header "Authorization: Bearer …"`.
+
+### Recorrido en local (JSON-RPC directo, script temporal)
+Resultados abajo, tal cual se observaron.
+
+| Paso | Observado |
+|---|---|
+| Sin token / token con formato válido pero desconocido | 401 en ambos |
+| `initialize` con una clave de Acme Ltd. | 200, `serverInfo` web3rails 0.1.0 |
+| `tools/list` | las nueve herramientas |
+| `whoami`, `get_overview`, `list_wallets`, `list_reconciliation_queue`, `list_exceptions`, `list_exports`, `list_movements` | 200 con datos de Acme (2 movimientos, 1 sin identificar, propuesta con señales `amount_compatible` + `date_window`) |
+| `get_movement` con un id de otra organización | «not found in this organization» |
+| Auditoría | 8 filas con `api_key_id` de la clave usada, actor `api` |
+| Clave revocada | 401 en la llamada siguiente |
+
+Fallo encontrado por el recorrido y corregido: el proxy de sesión redirigía `/api/mcp` al login (devolvía HTML con 200); la ruta se añadió a las públicas, ya que autentica por clave de API.
