@@ -23,6 +23,37 @@ export interface HeliusTx {
   transactionError: unknown | null;
   accountData?: { account: string; tokenBalanceChanges?: HeliusTokenBalanceChange[] }[];
   tokenTransfers?: HeliusTokenTransfer[];
+  /** Parsed instructions; the Memo program's data carries the payment reference (Solana Pay convention). */
+  instructions?: { programId: string; data?: string; accounts?: string[] }[];
+}
+
+const MEMO_PROGRAMS = new Set(["MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr", "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo"]);
+const BASE58 = /^[1-9A-HJ-NP-Za-km-z]+$/;
+
+/** The memo text of a transaction, if any. Helius gives instruction data base58-encoded; a plain string is taken as is. */
+export function extractMemo(tx: HeliusTx): string | null {
+  for (const ix of tx.instructions ?? []) {
+    if (!MEMO_PROGRAMS.has(ix.programId) || !ix.data) continue;
+    let text = ix.data;
+    if (BASE58.test(ix.data)) {
+      try { text = Buffer.from(bs58decode(ix.data)).toString("utf8"); } catch { text = ix.data; }
+    }
+    text = text.replace(/[\u0000-\u001f]/g, " ").trim();
+    if (text) return text.slice(0, 200);
+  }
+  return null;
+}
+function bs58decode(s: string): Uint8Array {
+  const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  const bytes = [0];
+  for (const ch of s) {
+    let carry = ALPHABET.indexOf(ch);
+    if (carry < 0) throw new Error("bad base58");
+    for (let i = 0; i < bytes.length; i++) { carry += bytes[i] * 58; bytes[i] = carry & 0xff; carry >>= 8; }
+    while (carry > 0) { bytes.push(carry & 0xff); carry >>= 8; }
+  }
+  for (const ch of s) { if (ch !== "1") break; bytes.push(0); }
+  return new Uint8Array(bytes.reverse());
 }
 
 export interface ImportRow {
@@ -37,6 +68,8 @@ export interface ImportRow {
   amount_raw: string;
   source_status: string;
   source_ref: string;
+  /** Memo text (payment reference) when the transaction carried one; stored in movements.raw and used by matching. */
+  memo?: string;
 }
 
 export interface KnownToken { mint: string; symbol: string; decimals: number }
@@ -50,6 +83,7 @@ export function mapHeliusTx(tx: HeliusTx, wallet: string, known: Map<string, Kno
   const status = tx.transactionError ? "failed" : "finalized";
   const changes = (tx.accountData ?? []).flatMap((a) => a.tokenBalanceChanges ?? []).filter((c) => known.has(c.mint));
   const mine = changes.filter((c) => c.userAccount === wallet);
+  const memo = extractMemo(tx);
   let idx = 0;
   for (const c of mine) {
     const token = known.get(c.mint)!;
@@ -78,6 +112,7 @@ export function mapHeliusTx(tx: HeliusTx, wallet: string, known: Map<string, Kno
       amount_raw: abs,
       source_status: status,
       source_ref: `helius:${tx.signature}`,
+      ...(memo ? { memo } : {}),
     });
   }
   return { rows, skipped };
