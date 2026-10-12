@@ -13,7 +13,7 @@ npx supabase start        # local stack on ports 573xx (API 57321, DB 57322, Stu
 cp .env.example .env.local  # local keys are printed by `supabase start`
 npm run dev               # http://localhost:3000
 export SUPABASE_SERVICE_ROLE_KEY=$(npx supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2- | tr -d '"')   # tests need the local service-role key (never committed)
-npm test                  # 51 rule tests against the local stack (creates and deletes its own users/orgs)
+npm test                  # 45 rule tests against the local stack (creates and deletes its own users/orgs)
 npm run build && npm run lint
 ```
 
@@ -69,9 +69,8 @@ Matching is 1:1; partial/grouped payments stay as `unsupported_partial` exceptio
 |---|---|---|
 | Supabase | project `Web3rails`, ref `bkexywilygfdnpggsztw`, eu-west-1 | Linked with `npx supabase link`. Migrations: `npx supabase db push`. Auth URLs come from `[remotes.production]` in `supabase/config.toml`: review `npx supabase config diff --project-ref bkexywilygfdnpggsztw` before `config push`. |
 | Vercel | project `app` on `rgv3n/web3rails`, Root Directory `app/` | Env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (public), `HELIUS_API_KEY` (secret, production only), `ATTESTATION_HMAC_SECRET` (secret; same value as the Vault secret `attestation_hmac` in Supabase: `npx supabase db query --linked "select vault.create_secret(...)"`). Preview/production `.vercel.app` URLs are behind Vercel SSO. |
-| Domain | `app.web3rails.io` | Live since 10-oct-2026 (CNAME in Cloudflare → Vercel, domain attached to the project). Auth redirects point here. |
-| Email | Resend, sender `noreply@web3rails.io` | Configured by hand in the Supabase dashboard (Auth → SMTP) on 11-oct-2026; deliberately **not** declared in `config.toml`, so `config push` cannot overwrite it with an empty key. Custom templates in `supabase/templates/` are not declared either. |
+| Domain | `app.web3rails.io` | Pending: CNAME in Cloudflare → Vercel, then add the domain to the project. Until then confirmation emails redirect to a domain that does not resolve (the email is still confirmed; sign in afterwards). |
 
 Demo data on the hosted project (seeded 10-oct-2026 through the app's own RPCs as the owner user): organization **Acme Ltd. (demo)** (`is_demo = true`, badge "Demo data"), two sample wallets, the three rows of `docs/samples/movements.sample.csv` (source `demo`), the two invoices of `docs/samples/invoices.sample.csv`, Northwind context + accepted match, the 4,250 USDC receipt left as a proposal to decide. Re-seed by repeating those imports from the UI; demo organizations only accept demo-labelled data.
 
-Hosted Auth keeps email confirmation and MFA enrolment on (stricter than local dev). The web UI never uses the service-role key; the only server-side use is the MCP endpoint (`src/lib/mcp/service.ts`, PR #3), which authenticates organizations by API key.
+Hosted Auth keeps email confirmation and MFA enrolment on (stricter than local dev). The service-role key is never used by this app.
