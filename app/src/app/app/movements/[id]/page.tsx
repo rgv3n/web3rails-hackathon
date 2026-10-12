@@ -50,7 +50,9 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
   const { data: orgRow } = await supabase.from("organizations").select("matching_tolerance").eq("id", ctx.org.id).single();
   const tolerance = String(orgRow?.matching_tolerance ?? "0.01");
   const current = (revisions ?? []).find((r) => r.version === m.context_version) ?? null;
-  const txUrl = explorerTxUrl("solana", m.tx_signature);
+  // Demo movements carry sample signatures and addresses: no explorer links, they would 404.
+  const linkable = m.source !== "demo";
+  const txUrl = linkable ? explorerTxUrl("solana", m.tx_signature) : null;
   const tz = ctx.org.timezone;
   const fmt = (d: string) => new Date(d).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: tz });
 
@@ -98,10 +100,10 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
             <Row k="Instruction">{m.instruction_index}</Row>
             <Row k="Block time">{fmt(m.block_time)} <span className="text-fg-subtle">({tz})</span></Row>
             <Row k="From" mono>
-              <AddressLink address={m.from_address} />
+              <AddressLink address={m.from_address} link={linkable} />
             </Row>
             <Row k="To" mono>
-              <AddressLink address={m.to_address} />
+              <AddressLink address={m.to_address} link={linkable} />
             </Row>
             <Row k="Token" mono>
               {m.token_symbol ?? "—"} · {m.token_mint} · {m.token_decimals} decimals
@@ -227,8 +229,8 @@ export default async function MovementDetail(props: { params: Promise<{ id: stri
   );
 }
 
-function AddressLink({ address }: { address: string }) {
-  const url = explorerAddressUrl("solana", address);
+function AddressLink({ address, link = true }: { address: string; link?: boolean }) {
+  const url = link ? explorerAddressUrl("solana", address) : null;
   return url ? (
     <a href={url} target="_blank" rel="noreferrer" className="hover:underline" title={address}>
       {address}
