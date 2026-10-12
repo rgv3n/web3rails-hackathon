@@ -267,3 +267,28 @@ Resultados abajo, tal cual se observaron.
 | Clave revocada | 401 en la llamada siguiente |
 
 Fallo encontrado por el recorrido y corregido: el proxy de sesión redirigía `/api/mcp` al login (devolvía HTML con 200); la ruta se añadió a las públicas, ya que autentica por clave de API.
+
+## Atestación pública en Solana Attestation Service (opt-in) · 12-oct-2026
+
+Rama `sas-attestations`. Migración `20261012170000_sas_attestations.sql`: `wallets.sas_opt_in` (apagado por defecto), tabla `sas_attestations` (una viva por wallet), funciones `set_wallet_sas_opt_in` (admin; no se puede apagar con una atestación publicada), `record_sas_attestation` (admin; exige certificado verificado, opt-in, exactamente los cinco campos `wallet, subject_type, level, issuer, statement_sha256`, todos texto, wallet igual a la de la fila) y `record_sas_close` (admin). Emisor en `src/lib/sas.ts` (`@solana/attestation` 2.1.0 sobre `@solana/kit` 8.4.0; credencial `WEB3RAILS`, schema `WALLET-OWNERSHIP` v1, nonce = dirección de la wallet, expiry = caducidad del certificado, misma clave que el anclaje). Campos y guard en `src/lib/sas-fields.ts`. Tarjeta «Public attestation on Solana (opt-in)» en la pantalla de verificación de la wallet, con opt-in, Publish y Close. Mainnet solo con `SAS_MAINNET=1`.
+
+### Pruebas automáticas
+`npm test` → **64 pruebas, 64 en verde** (7 nuevas en `tests/sas.test.ts`).
+
+| Regla | Observado |
+|---|---|
+| Campos | exactamente los cinco; `issuer` sale de la raíz de la cadena (`FNMT`, `WEB3RAILS-DEMO`), nunca del firmante; `level` = `qualified_linked` si hay firma de wallet enlazada |
+| Guard de datos personales | rechaza publicar si NIF, CIF, nombre, apellidos, organización o serie del certificado aparecen en los campos; rechaza campos inesperados |
+| `statement_sha256` | compromiso: misma identidad con otro `nonce` da otro hash; la declaración lleva 96 bits aleatorios |
+| Sin opt-in | `FORBIDDEN: this wallet has not opted in`; el opt-in solo lo cambia un admin y queda en auditoría (`sas_opt_in_changed`) |
+| Base de datos | rechaza 4 o 6 campos, otra wallet, `level` inventado; operador → `FORBIDDEN` |
+| Publicación | una sola viva por wallet (`CONFLICT`); apagar el opt-in con una viva → `CONFLICT`; cierre con firma registrado; eventos `sas_published` y `sas_closed` |
+
+### Prueba de humo contra devnet (script temporal, no commiteado)
+Con la clave de anclaje local (`88yLdrB5…zroY`, 0 SOL): el cliente de kit deriva la credencial `HxafbDKpFc9jexaghXmUw7YDQNTkwqs7Dbzg2pCDHHxX` y el schema `BYKtW5omQLAoDiTQ3ihhhJdCQpur2AkTzyJUYw2GADWa`, lee que no existen todavía y, al intentar publicar, devnet rechaza en simulación por falta de saldo. Es decir: el cableado es correcto y lo único que falta para una emisión real es SOL en la clave.
+
+### Limitaciones reales
+- Sin emisión real en devnet todavía: la clave local no tiene saldo y el clasificador no me deja escribir en producción. La primera emisión real la hace Rubén desde la interfaz, en producción, con la clave de producción (0,1 SOL).
+- La primera publicación crea además la credencial y el schema (dos transacciones más, con su rent); las siguientes solo la atestación.
+- Lectura de la atestación desde la cadena (`readSasAttestation`) implementada pero sin pantalla: la verificación pública la hace cualquiera con el explorador o con el cliente de SAS.
+- La caducidad es la del certificado; si el certificado se revoca antes, hay que cerrar la atestación a mano (botón Close). No hay vigilancia OCSP periódica todavía.

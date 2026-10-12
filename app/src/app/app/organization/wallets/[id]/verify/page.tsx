@@ -6,6 +6,9 @@ import { attestationConfigured } from "@/lib/attestation/proof";
 import { Badge, Card, CardHeader, Notice, PageTitle } from "@/components/ui";
 import { VerifyOwnership } from "./VerifyOwnership";
 import { ProveControl } from "./ProveControl";
+import { PublishAttestation, type LiveSas } from "./PublishAttestation";
+import { explorerAddressUrl, sasConfigured } from "@/lib/sas";
+import { anchorCluster } from "@/lib/solana-anchor";
 
 export const metadata = { title: "Verify wallet ownership" };
 
@@ -14,10 +17,11 @@ export default async function VerifyWalletPage(props: { params: Promise<{ id: st
   const ctx = await requireOrg();
   const supabase = await createClient();
   const [{ data: wallet }, { data: last }] = await Promise.all([
-    supabase.from("wallets").select("id, label, address, chain, ownership, status, control_verified_at, entity:legal_entities(name, tax_id, subject_type)").eq("id", id).eq("org_id", ctx.org.id).maybeSingle(),
+    supabase.from("wallets").select("id, label, address, chain, ownership, status, control_verified_at, sas_opt_in, entity:legal_entities(name, tax_id, subject_type)").eq("id", id).eq("org_id", ctx.org.id).maybeSingle(),
     supabase.from("wallet_ownership_attestations").select("id, status, trust_profile, decided_at, signer, chain, ocsp, reasons").eq("wallet_id", id).eq("status", "verified").eq("method", "certificate").order("decided_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const { data: lastKey } = await supabase.from("wallet_ownership_attestations").select("id, decided_at, linked_attestation_id").eq("wallet_id", id).eq("status", "verified").eq("method", "wallet_key").order("decided_at", { ascending: false }).limit(1).maybeSingle();
+  const { data: liveSas } = await supabase.from("sas_attestations").select("id, attestation_pda, signature, cluster, fields, published_at, expiry").eq("wallet_id", id).eq("status", "published").maybeSingle();
   if (!wallet) notFound();
   const ent = wallet.entity as unknown as { name: string; tax_id: string | null; subject_type: string } | null;
   const admin = can(ctx, "manage_org");
@@ -61,6 +65,15 @@ export default async function VerifyWalletPage(props: { params: Promise<{ id: st
           <div className="space-y-6">
             <ProveControl walletId={wallet.id} address={wallet.address} alreadyProven={Boolean(wallet.control_verified_at)} certificateAttestationId={last?.id ?? null} />
             <VerifyOwnership walletId={wallet.id} isDemo={ctx.org.is_demo} alreadyVerified={wallet.ownership === "verified"} />
+            <PublishAttestation
+              walletId={wallet.id}
+              optIn={Boolean(wallet.sas_opt_in)}
+              configured={sasConfigured()}
+              cluster={anchorCluster()}
+              certificateAttestationId={last?.id ?? null}
+              live={(liveSas as LiveSas | null) ?? null}
+              explorerUrl={liveSas ? explorerAddressUrl(liveSas.attestation_pda, liveSas.cluster as "devnet" | "mainnet-beta") : null}
+            />
           </div>
         )}
       </div>
