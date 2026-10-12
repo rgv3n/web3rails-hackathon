@@ -1,0 +1,2 @@
+external_ref,counterparty_name,kind,amount,currency,issued_at,due_at,document_ref
+INV-292,Acme Customer SA,receivable,4250.00,USDC,2026-09-12,2026-09-27,drive://invoices/INV-292.pdf
