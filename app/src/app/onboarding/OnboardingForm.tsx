@@ -12,6 +12,9 @@ export function OnboardingForm() {
       <Field label="Organization name">
         <Input name="name" required placeholder="Acme Ltd." />
       </Field>
+      <Field label="Tax id (CIF)" hint="Optional now; needed to verify wallet ownership with a certificate.">
+        <Input name="tax_id" placeholder="B12345674" className="font-mono" />
+      </Field>
       <Field label="Base currency" hint="Fiat values at settlement are expressed in this currency.">
         <Select name="base_currency" defaultValue="EUR">
           <option value="EUR">EUR — Euro</option>

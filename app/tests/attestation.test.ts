@@ -12,6 +12,8 @@ import { ANON, SERVICE, URL } from "./env";
 import { verifyCades } from "../src/lib/attestation/verify-cades";
 import { verifyWalletSignature } from "../src/lib/attestation/verify-wallet-signature";
 import { attestationProof } from "../src/lib/attestation/proof";
+import { checkSignerPolicy, normalizeTaxId } from "../src/lib/attestation/policy";
+import { createHash } from "node:crypto";
 import * as ed from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha2.js";
 import bs58 from "bs58";
@@ -65,6 +67,7 @@ beforeAll(async () => {
   await admin.from("memberships").insert([{ org_id: org, user_id: op.id, role: "operator" }]);
   for (const [o, label] of [[org, "q"], [orgDemo, "d"]] as const) {
     const { data: ent } = await admin.from("legal_entities").select("id").eq("org_id", o).single();
+    await admin.from("legal_entities").update({ tax_id: label === "d" ? "B00000000" : "B12345674" }).eq("id", ent!.id);
     const { data: w } = await admin.from("wallets").insert({ org_id: o, entity_id: ent!.id, chain: "solana", address: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin", label }).select("id").single();
     if (label === "q") walletQualified = w!.id; else walletDemo = w!.id;
   }
@@ -81,6 +84,10 @@ describe("issuing statements", () => {
     const st = JSON.parse(data.statement);
     expect(st.wallet).toBe("9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin");
     expect(st.nonce).toHaveLength(24);
+    expect(st.version).toBe(2);
+    expect(st.entity).toMatchObject({ tax_id: "B12345674", subject_type: "legal_entity" });
+    expect(st.text).toMatch(/^The holder of the signing certificate declares/); // neutral: no "as legal representative"
+    expect(st.text).toContain("tax id B12345674");
     expect(data.trust_profile).toBe("qualified");
     const r2 = await op.client.rpc("issue_wallet_attestation", { p_wallet: walletQualified });
     expect(r2.error?.message).toMatch(/FORBIDDEN/);
@@ -191,5 +198,65 @@ describe("wallet key proof (Phantom signMessage)", () => {
     expect(wallet!.control_evidence).toBe("attestation:" + issued.id);
     const { data: ev } = await admin.from("audit_events").select("action").eq("entity_id", w!.id).eq("action", "control_verified");
     expect(ev).toHaveLength(1);
+  });
+});
+
+describe("signer policy: the certificate must belong to the entity", () => {
+  const rep = { kind: "company_representative" as const, nif: "IDCES-00000000T", cif: "VATES-B00000000", organization: "ACME DEMO SL", commonName: "x", givenName: null, surname: null, notBefore: "", notAfter: "", serial: "" };
+  it("normalises ETSI prefixes", () => {
+    expect(normalizeTaxId("VATES-B12345674")).toBe("B12345674");
+    expect(normalizeTaxId("IDCES-12345678Z")).toBe("12345678Z");
+    expect(normalizeTaxId(" b-123 ")).toBe("B123");
+    expect(normalizeTaxId(null)).toBeNull();
+  });
+  it("company: representative certificate with the entity's CIF passes; another CIF, a personal certificate or a missing tax id fail", () => {
+    expect(checkSignerPolicy(rep, { name: "ACME", tax_id: "B00000000", subject_type: "legal_entity" })).toEqual([]);
+    expect(checkSignerPolicy(rep, { name: "ACME", tax_id: "B99999999", subject_type: "legal_entity" }).join()).toMatch(/represents tax id B00000000, not B99999999/);
+    expect(checkSignerPolicy({ ...rep, kind: "natural_person", cif: null }, { name: "ACME", tax_id: "B00000000", subject_type: "legal_entity" }).join()).toMatch(/personal certificate/);
+    expect(checkSignerPolicy(rep, { name: "ACME", tax_id: null, subject_type: "legal_entity" }).join()).toMatch(/no tax id/);
+  });
+  it("natural person: the certificate's NIF must equal the person's tax id", () => {
+    expect(checkSignerPolicy({ ...rep, kind: "natural_person", cif: null }, { name: "Maria", tax_id: "00000000T", subject_type: "natural_person" })).toEqual([]);
+    expect(checkSignerPolicy({ ...rep, kind: "natural_person", cif: null }, { name: "Maria", tax_id: "11111111H", subject_type: "natural_person" }).join()).toMatch(/belongs to 00000000T, not to 11111111H/);
+  });
+});
+
+describe("linked proofs: the wallet key accepts the certificate-signed statement", () => {
+  it("a wallet_key statement linked to a verified certificate attestation carries that signature's SHA-256; linking to an unverified one is refused", async () => {
+    // certificate proof first (demo org, demo cert matches the entity's CIF B00000000)
+    const priv = ed.utils.randomSecretKey();
+    const address = bs58.encode(ed.getPublicKey(priv));
+    const { data: ent } = await admin.from("legal_entities").select("id").eq("org_id", orgDemo).single();
+    const { data: w } = await admin.from("wallets").insert({ org_id: orgDemo, entity_id: ent!.id, chain: "solana", address, label: "linked" }).select("id").single();
+    const { data: cert } = await adm.client.rpc("issue_wallet_attestation", { p_wallet: w!.id, p_method: "certificate" });
+    const cades = signText(cert.statement);
+    const report = await verifyCades({ signatureDer: cades, content: Buffer.from(cert.statement, "utf8"), profile: "demo" });
+    expect(report.verdict).toBe("accepted");
+    const signerJson = JSON.stringify(report.signer);
+    // linking before the certificate attestation is verified must fail
+    const early = await adm.client.rpc("issue_wallet_attestation", { p_wallet: w!.id, p_method: "wallet_key", p_link: cert.id });
+    expect(early.error?.message).toMatch(/INVALID: linked attestation is not a verified certificate signature/);
+    const rec = await adm.client.rpc("record_wallet_attestation", { p_id: cert.id, p_verdict: "verified", p_proof: attestationProof(cert.id, "verified", signerJson), p_signer_json: signerJson, p_chain: report.chain, p_ocsp: report.ocsp, p_reasons: [], p_signature_b64: cades.toString("base64"), p_certificate_pem: report.certificatePem, p_ocsp_der: null });
+    expect(rec.error).toBeNull();
+    // now the linked wallet-key statement
+    const { data: issued, error } = await adm.client.rpc("issue_wallet_attestation", { p_wallet: w!.id, p_method: "wallet_key", p_link: cert.id });
+    expect(error).toBeNull();
+    const st = JSON.parse(issued.statement);
+    expect(st.certificate_attestation_id).toBe(cert.id);
+    expect(st.certificate_signature_sha256).toBe(createHash("sha256").update(cades).digest("hex"));
+    expect(st.text).toContain(st.certificate_signature_sha256);
+    const sig = ed.sign(new TextEncoder().encode(issued.statement), priv);
+    const keySigner = JSON.stringify({ kind: "wallet_key", wallet: address });
+    const r = await adm.client.rpc("record_wallet_attestation", { p_id: issued.id, p_verdict: "verified", p_proof: attestationProof(issued.id, "verified", keySigner), p_signer_json: keySigner, p_chain: null, p_ocsp: null, p_reasons: [], p_signature_b64: Buffer.from(sig).toString("base64"), p_certificate_pem: null, p_ocsp_der: null });
+    expect(r.error).toBeNull();
+    const { data: att } = await admin.from("wallet_ownership_attestations").select("linked_attestation_id, status").eq("id", issued.id).single();
+    expect(att!).toMatchObject({ linked_attestation_id: cert.id, status: "verified" });
+    const { data: wallet } = await admin.from("wallets").select("ownership, control_verified_at").eq("id", w!.id).single();
+    expect(wallet!.ownership).toBe("verified");
+    expect(wallet!.control_verified_at).not.toBeNull();
+    // a link to a different wallet's attestation is refused
+    const { data: w2 } = await admin.from("wallets").insert({ org_id: orgDemo, entity_id: ent!.id, chain: "solana", address: bs58.encode(ed.getPublicKey(ed.utils.randomSecretKey())), label: "other" }).select("id").single();
+    const cross = await adm.client.rpc("issue_wallet_attestation", { p_wallet: w2!.id, p_method: "wallet_key", p_link: cert.id });
+    expect(cross.error?.message).toMatch(/does not belong to this wallet/);
   });
 });

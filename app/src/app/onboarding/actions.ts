@@ -18,11 +18,14 @@ export async function createOrganization(_prev: OnboardingState, formData: FormD
 
   const supabase = await createClient();
   const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 6)}`;
+  const taxId = String(formData.get("tax_id") ?? "").trim().toUpperCase().replace(/[\s-]/g, "") || null;
+  if (taxId && !/^[A-Z0-9]{5,20}$/.test(taxId)) return { error: "Tax id: letters and digits only, 5 to 20 characters." };
   const { data: orgId, error } = await supabase.rpc("create_organization", {
     p_name: name,
     p_slug: slug,
     p_base_currency: baseCurrency,
     p_timezone: timezone,
+    p_tax_id: taxId,
   });
   if (error) return { error: error.message };
   // The new organization becomes the active one.

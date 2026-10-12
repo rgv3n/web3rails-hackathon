@@ -31,6 +31,8 @@ export interface VerifyReport {
   chain: string[] | null; // subject CNs from signer to anchor
   anchor: "fnmt" | "demo" | null;
   ocsp: { url: string; status?: "good" | "revoked" | "unknown"; producedAt?: string; error?: string; skipped?: string } | null;
+  /** The signed OCSP response as received (DER, base64): evidence that outlives the responder's answer. */
+  ocspResponseB64: string | null;
   signer: Signer | null;
   signingTime: string | null;
   certificatePem: string | null;
@@ -85,7 +87,8 @@ async function checkOcsp(leaf: pkijs.Certificate, issuer: pkijs.Certificate, url
     clearTimeout(timer);
   }
   if (!res.ok) throw new Error(`OCSP HTTP ${res.status}`);
-  const resp = pkijs.OCSPResponse.fromBER(ab(new Uint8Array(await res.arrayBuffer())));
+  const rawResponse = new Uint8Array(await res.arrayBuffer());
+  const resp = pkijs.OCSPResponse.fromBER(ab(rawResponse));
   if (resp.responseStatus.valueBlock.valueDec !== 0) throw new Error(`OCSP responseStatus ${resp.responseStatus.valueBlock.valueDec}`);
   if (!resp.responseBytes) throw new Error("OCSP response without responseBytes");
   const basic = pkijs.BasicOCSPResponse.fromBER(ab(resp.responseBytes.response.valueBlock.valueHexView));
@@ -101,12 +104,12 @@ async function checkOcsp(leaf: pkijs.Certificate, issuer: pkijs.Certificate, url
   if (!responderOk) throw new Error("OCSP response not signed by a trusted responder");
   const st = await basic.getCertificateStatus(leaf, issuer);
   if (!st.isForCertificate) throw new Error("OCSP response is for another certificate");
-  return { status: OCSP_STATUS[st.status] ?? "unknown", producedAt: basic.tbsResponseData.producedAt.toISOString() };
+  return { status: OCSP_STATUS[st.status] ?? "unknown", producedAt: basic.tbsResponseData.producedAt.toISOString(), raw: Buffer.from(rawResponse).toString("base64") };
 }
 
 export async function verifyCades(input: { signatureDer: Uint8Array; content: Uint8Array; profile: TrustProfile; now?: Date }): Promise<VerifyReport> {
   const now = input.now ?? new Date();
-  const report: VerifyReport = { verdict: "rejected", reasons: [], signature: false, chain: null, anchor: null, ocsp: null, signer: null, signingTime: null, certificatePem: null };
+  const report: VerifyReport = { verdict: "rejected", reasons: [], signature: false, chain: null, anchor: null, ocsp: null, ocspResponseB64: null, signer: null, signingTime: null, certificatePem: null };
   const fnmtRoot = pemToCert(FNMT_ROOT_PEM);
   const demoRoot = pemToCert(DEMO_ROOT_PEM);
   const roots = input.profile === "demo" ? [fnmtRoot, demoRoot] : [fnmtRoot];
@@ -189,7 +192,9 @@ export async function verifyCades(input: { signatureDer: Uint8Array; content: Ui
     if (!issuer || !url) report.reasons.push("certificate has no OCSP service (AIA); revocation cannot be checked");
     else {
       try {
-        report.ocsp = { url, ...(await checkOcsp(leaf, issuer, url, roots)) };
+        const { raw, ...ocsp } = await checkOcsp(leaf, issuer, url, roots);
+        report.ocsp = { url, ...ocsp };
+        report.ocspResponseB64 = raw;
         if (report.ocsp.status !== "good") report.reasons.push(`certificate status ${report.ocsp.status}`);
       } catch (e) {
         report.ocsp = { url, error: (e as Error).message };

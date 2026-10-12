@@ -15,12 +15,16 @@ export async function createEntity(_p: OrgAdminState, formData: FormData): Promi
   if (!can(ctx, "manage_org")) return { error: "Only admins can manage entities." };
   const name = String(formData.get("name") ?? "").trim();
   const reporting_currency = String(formData.get("reporting_currency") ?? "EUR");
+  const tax_id = String(formData.get("tax_id") ?? "").trim().toUpperCase().replace(/[\s-]/g, "") || null;
+  const subject_type = String(formData.get("subject_type") ?? "legal_entity");
   if (name.length < 2) return { error: "Entity name is required." };
   if (!["EUR", "USD"].includes(reporting_currency)) return { error: "Unsupported currency." };
+  if (!["legal_entity", "natural_person"].includes(subject_type)) return { error: "Unsupported entity type." };
+  if (tax_id && !/^[A-Z0-9]{5,20}$/.test(tax_id)) return { error: "Tax id: letters and digits only, 5 to 20 characters." };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("legal_entities").insert({ org_id: ctx.org.id, name, reporting_currency }).select("id").single();
+  const { data, error } = await supabase.from("legal_entities").insert({ org_id: ctx.org.id, name, reporting_currency, tax_id, subject_type }).select("id").single();
   if (error) return { error: error.message };
-  await supabase.from("audit_events").insert({ org_id: ctx.org.id, actor_id: ctx.userId, entity: "legal_entity", entity_id: data.id, action: "created", after: { name, reporting_currency } });
+  await supabase.from("audit_events").insert({ org_id: ctx.org.id, actor_id: ctx.userId, entity: "legal_entity", entity_id: data.id, action: "created", after: { name, reporting_currency, tax_id, subject_type } });
   revalidatePath("/app/organization");
   return { ok: `Entity “${name}” created.` };
 }
