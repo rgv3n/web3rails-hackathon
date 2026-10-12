@@ -22,7 +22,7 @@ financial operations. First product: reconciliation. Tone: institutional, precis
 Never: purple gradients, neon, floating coins, 3D chain logos.
 
 ## Logo
-Official assets in `public/brand/`: `logo-full.png` (mark + wordmark + domain line), `logo-lockup.png`
+Official assets in `public/brand/`: `logo-full.png` (mark + wordmark + domain line `web3rails.io`), `logo-lockup.png`
 (mark + wordmark), `logo-mark.png` (the W). Ask for the vector original (SVG/AI) before print or large sizes.
 The favicon is `src/app/icon.png`, built from the mark.
 
