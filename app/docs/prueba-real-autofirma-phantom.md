@@ -16,6 +16,21 @@ Escrito el 12-oct-2026 para la prueba en el equipo de Rubén. Dura unos 20 minut
 4. **Phantom** instalado, desbloqueado y con la cuenta que se va a declarar seleccionada. La red de Phantom da igual: solo se firma un mensaje, nunca una transacción.
 5. Sesión en la app como `rubengl@gmail.com` y, en el selector de la barra lateral, la organización **Web3rails**.
 
+## Estado de este equipo (Linux, comprobado el 12-oct-2026)
+
+- **AutoFirma no está instalada.** No hay binario, paquete ni manejador de `afirma://`. El instalador oficial 1.9.0 (67 MB, descargado el 10-oct) está en `spikes/fnmt-firma/autofirma/autofirma_1_9.deb`, fuera de git; el spike lo usó solo desextraído, por línea de comandos.
+- Instalar necesita `sudo`, así que lo hace Rubén, con Chrome y Firefox cerrados (el instalador mete su CA local en los almacenes de los navegadores):
+
+```bash
+cd "$HOME/1-Workspace/Companies Automation/Proyectos/Web3Rails/spikes/fnmt-firma/autofirma"
+sudo apt install ./autofirma_1_9.deb
+xdg-mime query default x-scheme-handler/afirma   # debe responder un .desktop de Autofirma
+```
+
+  El paquete depende de `libnss3-tools`, que tampoco está; `apt` lo resuelve. Java 26 (Zulu) ya está.
+- **Certificado:** en Linux AutoFirma firma con el almacén de Firefox o de Chrome, o directamente con el fichero `.p12` del certificado (en el diálogo de firma, almacén «PKCS#12»). La vía del `.p12` es la más segura de que funcione a la primera.
+- **Phantom** está instalada en el perfil por defecto de Google Chrome. Chrome es el navegador para la prueba.
+
 ## Parte A · Phantom (5 min)
 
 1. `Organization` → **Connect Phantom**. Phantom pide aprobar la conexión: aceptar. La app solo lee la dirección pública.
